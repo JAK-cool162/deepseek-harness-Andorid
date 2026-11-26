@@ -71,6 +71,8 @@ public final class MainActivity extends Activity {
     private boolean engineSignInRefused;
     /** Longest wait for a Termux-started engine to answer. */
     private static final long ENGINE_START_WAIT_MS = 45_000;
+    /** Longest wait for the built-in engine; proot makes Node's first start slow. */
+    private static final long BUILTIN_START_WAIT_MS = 180_000;
 
     private boolean isEnginePage(Uri uri) {
         return Engine.isLoopback(uri.getHost()) && uri.getPort() != server.port();
@@ -127,6 +129,10 @@ public final class MainActivity extends Activity {
      * @param safeMode whether the on-device page starts without the custom style
      */
     private void loadHarness(boolean safeMode) {
+        if (Engine.builtinSelected(this) && new LinuxEngine(this).installed()) {
+            loadBuiltinEngine(safeMode);
+            return;
+        }
         String engine = Engine.savedUrl(this);
         if (engine == null) {
             webView.loadUrl(server.bootUrl(safeMode));
@@ -159,6 +165,40 @@ public final class MainActivity extends Activity {
                 }
             });
         }, "dsh-engine-probe").start();
+    }
+
+    /**
+     * Start the built-in Linux engine when it is not running, wait for the sign-in link it
+     * prints, and load it; fall back to the on-device harness when it does not come up.
+     */
+    private void loadBuiltinEngine(boolean safeMode) {
+        String running = EngineService.signInUrl();
+        if (running != null) {
+            webView.loadUrl(running);
+            return;
+        }
+        EngineService.State state = EngineService.state();
+        if (state != EngineService.State.STARTING && state != EngineService.State.INSTALLING) {
+            EngineService.send(this, EngineService.ACTION_START);
+        }
+        Toast.makeText(this, R.string.engine_starting_builtin, Toast.LENGTH_LONG).show();
+        long deadline = System.currentTimeMillis() + BUILTIN_START_WAIT_MS;
+        Runnable poll = new Runnable() {
+            @Override
+            public void run() {
+                if (webView == null) return;
+                String url = EngineService.signInUrl();
+                if (url != null) {
+                    webView.loadUrl(url);
+                } else if (System.currentTimeMillis() > deadline || EngineService.state() == EngineService.State.STOPPED) {
+                    Toast.makeText(MainActivity.this, R.string.engine_builtin_fallback, Toast.LENGTH_LONG).show();
+                    webView.loadUrl(server.bootUrl(safeMode));
+                } else {
+                    main.postDelayed(this, 500);
+                }
+            }
+        };
+        main.postDelayed(poll, 500);
     }
 
     /** Inject the mobile base style and the Enter shim into a Termux engine page. */

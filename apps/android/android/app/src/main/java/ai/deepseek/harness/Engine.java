@@ -28,6 +28,7 @@ final class Engine {
     private static final String PREFS = "engine";
     private static final String KEY_URL = "url";
     private static final String KEY_PAIRED = "paired";
+    private static final String KEY_BUILTIN = "builtin";
     /** Port the setup commands start `dsh web` on. */
     static final int DEFAULT_PORT = 47400;
     /** Termux's permission for running commands on behalf of other apps. */
@@ -59,6 +60,22 @@ final class Engine {
         if (url == null) editor.remove(KEY_URL);
         else editor.putString(KEY_URL, url);
         editor.apply();
+    }
+
+    /**
+     * @param context any context of this app
+     * @return whether the built-in Linux engine is selected; it takes precedence over a saved Termux link
+     */
+    static boolean builtinSelected(Context context) {
+        return prefs(context).getBoolean(KEY_BUILTIN, false);
+    }
+
+    /**
+     * @param context any context of this app
+     * @param selected whether to use the built-in Linux engine
+     */
+    static void setBuiltin(Context context, boolean selected) {
+        prefs(context).edit().putBoolean(KEY_BUILTIN, selected).apply();
     }
 
     /**

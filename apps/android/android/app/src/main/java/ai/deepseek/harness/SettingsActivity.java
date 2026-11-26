@@ -33,7 +33,17 @@ public final class SettingsActivity extends Activity {
     private static final int RUN_COMMAND_REQUEST = 1;
 
     private TextView status;
+    private TextView builtinStatus;
+    private TextView builtinLog;
     private EditText link;
+    private final android.os.Handler refresh = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable refreshBuiltin = new Runnable() {
+        @Override
+        public void run() {
+            showBuiltin();
+            refresh.postDelayed(this, 1000);
+        }
+    };
     private Button defaultStyle;
     private Button glassStyle;
 
@@ -54,6 +64,26 @@ public final class SettingsActivity extends Activity {
         column.addView(defaultStyle);
         column.addView(glassStyle);
         markStyle();
+
+        column.addView(text(getString(R.string.builtin_heading), 18, true));
+        column.addView(text(getString(R.string.builtin_intro), 14, false));
+        builtinStatus = text("", 14, true);
+        column.addView(builtinStatus);
+        column.addView(button(getString(R.string.builtin_install), () -> EngineService.send(this, EngineService.ACTION_INSTALL)));
+        column.addView(button(getString(R.string.builtin_use), () -> {
+            if (!new LinuxEngine(this).installed()) {
+                builtinStatus.setText(R.string.engine_not_installed);
+                return;
+            }
+            Engine.setBuiltin(this, true);
+            restart();
+        }));
+        column.addView(button(getString(R.string.builtin_stop), () -> EngineService.send(this, EngineService.ACTION_STOP)));
+        column.addView(button(getString(R.string.builtin_remove), this::removeBuiltin));
+        builtinLog = text("", 11, false);
+        builtinLog.setTypeface(Typeface.MONOSPACE);
+        builtinLog.setTextIsSelectable(true);
+        column.addView(builtinLog);
 
         column.addView(text(getString(R.string.engine_heading), 18, true));
         column.addView(text(getString(R.string.engine_intro), 14, false));
@@ -84,6 +114,7 @@ public final class SettingsActivity extends Activity {
         column.addView(link);
         column.addView(button(getString(R.string.engine_connect), this::connect));
         column.addView(button(getString(R.string.engine_use_device), () -> {
+            Engine.setBuiltin(this, false);
             Engine.save(this, null);
             restart();
         }));
@@ -94,6 +125,59 @@ public final class SettingsActivity extends Activity {
         scroll.setFitsSystemWindows(true);
         scroll.addView(column);
         setContentView(scroll);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refresh.post(refreshBuiltin);
+    }
+
+    @Override
+    protected void onPause() {
+        refresh.removeCallbacks(refreshBuiltin);
+        super.onPause();
+    }
+
+    private void showBuiltin() {
+        boolean installed = new LinuxEngine(this).installed();
+        EngineService.State state = EngineService.state();
+        String line;
+        switch (state) {
+            case INSTALLING:
+            case STARTING:
+                line = EngineService.step();
+                break;
+            case RUNNING:
+                line = getString(R.string.engine_running);
+                break;
+            case INSTALL_FAILED:
+                line = getString(R.string.engine_install_failed);
+                break;
+            default:
+                line = getString(installed ? R.string.builtin_installed : R.string.engine_not_installed);
+        }
+        if (Engine.builtinSelected(this)) line += "\n" + getString(R.string.builtin_selected);
+        builtinStatus.setText(line);
+        java.util.List<String> log = EngineService.log();
+        builtinLog.setText(String.join("\n", log.subList(Math.max(0, log.size() - 30), log.size())));
+    }
+
+    private void removeBuiltin() {
+        EngineService.send(this, EngineService.ACTION_STOP);
+        Engine.setBuiltin(this, false);
+        builtinStatus.setText(R.string.builtin_removing);
+        new Thread(() -> {
+            String result;
+            try {
+                new LinuxEngine(this).remove();
+                result = getString(R.string.builtin_removed);
+            } catch (java.io.IOException failed) {
+                result = failed.getMessage();
+            }
+            String shown = result;
+            runOnUiThread(() -> builtinStatus.setText(shown));
+        }, "dsh-engine-remove").start();
     }
 
     private void chooseStyle(String preset) {
@@ -149,6 +233,7 @@ public final class SettingsActivity extends Activity {
                     status.setText(R.string.engine_unreachable);
                     return;
                 }
+                Engine.setBuiltin(this, false);
                 Engine.save(this, chosen);
                 restart();
             });

@@ -1,0 +1,26 @@
+Third-party software bundled in the DeepSeek Harness Android app
+================================================================
+
+The built-in Linux engine runs on these prebuilt Android binaries from the
+Termux package repository (https://packages.termux.dev), unmodified except
+that the library name libtalloc.so.2 is rewritten to libtalloc.so so Android
+extracts it.
+
+PRoot 5.1.107.102 (lib/arm64-v8a/libproot.so, libproot-loader.so)
+  License: GNU General Public License, version 2
+  Source:  https://github.com/termux/proot
+  Build:   https://github.com/termux/termux-packages/tree/master/packages/proot
+
+talloc 2.5.0 (lib/arm64-v8a/libtalloc.so)
+  License: GNU Lesser General Public License, version 3
+  Source:  https://www.samba.org/ftp/talloc/
+  Build:   https://github.com/termux/termux-packages/tree/master/packages/libtalloc
+
+libandroid-shmem 0.7 (lib/arm64-v8a/libandroid-shmem.so)
+  License: BSD 3-Clause
+  Source:  https://github.com/termux/libandroid-shmem
+
+At install time the app downloads, and does not bundle: the official Debian
+bookworm-slim image (Debian Free Software Guidelines licenses), Node.js
+(MIT and bundled licenses), Debian packages, and the published
+@deepseek-ai/dsh npm package and its dependencies.

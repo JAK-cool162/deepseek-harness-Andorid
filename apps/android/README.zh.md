@@ -26,6 +26,10 @@ Android 应用在手机本机上运行 DeepSeek Harness。整个 Harness 插件�
 - **智能体技能**：[`defaults/`](defaults/) 打包为 `android/defaults.tar.gz`，每次启动都在已保存状态之后应用，使教智能体使用这些功能的 `android-app` 技能，以及 `home/android-ui/presets/` 下的样式预设（如 `liquid-glass.css`）保持最新。
 - **工作通知**：在中继请求进行期间以及最后一个请求结束后的 20 秒内，[`WorkingService`](android/app/src/main/java/ai/deepseek/harness/WorkingService.java) 以前台服务运行，显示带已用时间的常驻通知，持有部分唤醒锁，并请求 Android 16 将通知提升为实时动态。应用在后台时工作结束，会发出“已完成”通知。应用首次启动时会请求通知权限。
 
+## 完整引擎（内置 Linux）
+
+设备内 Harness 无法启动进程，因此安装插件、真实 shell、git 和 Python 需要完整的 Harness。**App settings → Full engine → Install or repair** 会在应用内部完成安装，不需要其他应用：[`LinuxEngine`](android/app/src/main/java/ai/deepseek/harness/LinuxEngine.java) 下载官方 `debian:bookworm-slim` arm64 镜像层（28 MB，按摘要固定，来自 `public.ecr.aws`，Docker Hub 作为备用），用 [`TarExtractor`](android/app/src/main/java/ai/deepseek/harness/TarExtractor.java) 解包，并在内置 proot 下以 root 运行 [`assets/linux/install.sh`](android/app/src/main/assets/linux/install.sh)。该脚本安装构建工具、Node.js 24.22.3 和已发布的 `@deepseek-ai/dsh`，可以安全地重复运行。[`EngineService`](android/app/src/main/java/ai/deepseek/harness/EngineService.java) 作为前台服务负责安装和运行中的 `dsh web`，从其输出中读取登录链接，并为设置页面保留最近 400 行日志。选择完整引擎后，应用在启动时启动它，最多等待三分钟获取链接，否则回退到设备内模式。`pnpm run fetch:proot` 把按 SHA-256 固定的 Termux 预编译 proot 下载到 `jniLibs/`，并重命名为 Android 只会解出的 `lib*.so`；[`assets/licenses/THIRD_PARTY.txt`](android/app/src/main/assets/licenses/THIRD_PARTY.txt) 列出了它们的许可证和源码。
+
 ## 应用设置与 Termux 引擎
 
 长按应用图标并选择 **App settings**（[`SettingsActivity`](android/app/src/main/java/ai/deepseek/harness/SettingsActivity.java)）。

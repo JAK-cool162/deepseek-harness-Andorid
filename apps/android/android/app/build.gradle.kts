@@ -16,6 +16,13 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.2.3-alpha.2"
+        // The bundled proot is arm64 only.
+        ndk { abiFilters += listOf("arm64-v8a") }
+    }
+
+    packaging {
+        // proot runs as an executable, so Android must extract it to the native library directory.
+        jniLibs { useLegacyPackaging = true }
     }
 
     signingConfigs {

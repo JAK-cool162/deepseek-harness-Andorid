@@ -1,0 +1,66 @@
+/*
+ * Mobile base style, always applied (safe mode included): app-like touch
+ * behavior over the Web shell. Controls do not start text selection or show a
+ * tap highlight; conversation text and fields stay selectable. Motion is press
+ * feedback and fades only, and is off under reduced motion.
+ */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+[role="button"],
+[role="tab"],
+[role="tablist"],
+[role="menuitem"],
+[role="option"],
+[role="switch"],
+[role="checkbox"],
+[role="radio"],
+nav,
+header,
+label,
+summary,
+img,
+svg {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea,
+[contenteditable="true"],
+[contenteditable=""] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"] {
+    transition: transform 120ms ease, background-color 160ms ease, opacity 160ms ease;
+  }
+
+  button:active:not(:disabled),
+  [role="button"]:active,
+  [role="tab"]:active,
+  [role="menuitem"]:active,
+  [role="option"]:active {
+    transform: scale(0.96);
+  }
+
+  [role="dialog"],
+  [role="menu"],
+  [role="listbox"] {
+    animation: dsh-android-fade-in 160ms ease-out;
+  }
+}
+
+@keyframes dsh-android-fade-in {
+  from { opacity: 0; }
+}

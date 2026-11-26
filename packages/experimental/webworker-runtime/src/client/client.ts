@@ -3,7 +3,8 @@
  * turns fetch-shaped calls into `req` frames and rebuilds Responses from the
  * worker's `res` / `res-head`+`res-chunk`+`res-end` frames, so every consumer
  * (boot payload, bundle transport, ApiClient, Typert RPC) speaks plain HTTP.
- * The worker's unsolicited `view-text` frame opens the page's text viewer.
+ * The worker's unsolicited `view-text` frame opens the page's text viewer
+ * unless a listener cancels the {@link VIEW_TEXT_EVENT} dispatched first.
  */
 
 import { packageAssetResolver } from '../package-assets.ts'
@@ -21,6 +22,15 @@ import type {
   TunnelStreamOpenFrame,
 } from '../transport/frames.ts'
 import { showTextViewer } from './text-viewer.ts'
+
+/** Cancelable window event dispatched before the text viewer opens; cancel it to render the file elsewhere. */
+export const VIEW_TEXT_EVENT = 'dsh:view-text'
+
+/** {@link VIEW_TEXT_EVENT} detail: the VFS path the Worker's `xdg-open` named and its text. */
+export interface ViewTextDetail {
+  readonly path: string
+  readonly text: string
+}
 
 /** Boot payload of the tunnel bootstrap route. */
 export interface BootPayload {
@@ -562,7 +572,11 @@ export class WorkerTunnel {
         return
       }
       case 'view-text': {
-        showTextViewer(frame.path, frame.text)
+        // An embedder may render the file itself by cancelling this event.
+        const event = new CustomEvent<ViewTextDetail>(VIEW_TEXT_EVENT, {
+          detail: { path: frame.path, text: frame.text }, cancelable: true,
+        })
+        if (globalThis.dispatchEvent(event)) showTextViewer(frame.path, frame.text)
         return
       }
       case 'stream-item':

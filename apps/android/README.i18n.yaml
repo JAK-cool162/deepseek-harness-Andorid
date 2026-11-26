@@ -8,6 +8,9 @@
 /deepseek-ai-dsh-android/how-it-works:
   en: 525cb33d6da8aa99
   zh: 74b8335960068ebb
+/deepseek-ai-dsh-android/phone-features:
+  en: fa36112432095faa
+  zh: 1768fd8d2fe16707
 /deepseek-ai-dsh-android/build:
   en: 6440041346472e8f
   zh: 8254c34d56d5bbe7
@@ -15,5 +18,5 @@
   en: 06a2a3351bb42cf0
   zh: b71a3dfe95671c26
 /deepseek-ai-dsh-android/known-limitations-and-deferred-work:
-  en: 4f7dafb777489238
-  zh: 3e3223156228a931
+  en: 4028efee3f9fb7ef
+  zh: 48f05fd6d11b1439

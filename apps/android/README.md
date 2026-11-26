@@ -18,6 +18,14 @@ The relay exists because browsers block responses from hosts that send no CORS h
 
 Saved state is the Worker's `home/` (settings, credentials, Session logs) and `workspace/` (files and the default Workspace). The page asks the Worker for a `vfs-export` overlay archive every 20 seconds while visible and whenever the app goes to the background, and uploads it only when it changed. The server keeps it in app-private storage, with the previous copy as `harness-state.tar.gz.prev`. The next launch passes it to the Worker as an overlay. If a start from saved data fails, the page offers to reset it.
 
+## Phone features
+
+- **Touch behavior**: [`web/mobile-base.css`](web/mobile-base.css) stops controls from starting text selection or showing a tap highlight, adds press feedback, and fades menus and dialogs in; it is off under reduced motion. The page stays clear of the status bar, display cutout, navigation bar, and keyboard.
+- **Artifacts**: the `present` tool's HTML files open in the shell's preview tab. Any HTML or SVG file the Worker opens with `xdg-open` renders full screen in a sandboxed frame ([`web/artifact-viewer.ts`](web/artifact-viewer.ts)) with **Save**, which writes it to Downloads through `/__dsh_save`.
+- **Style API**: the page applies `/dsh/home/android-ui/theme.css` live, read through the runtime's `vfs-read` frame every two seconds ([`web/theme.ts`](web/theme.ts)). Only CSS applies, files over 512 KB are ignored, and the agent's write outside the workspace needs the user's approval. `html[data-dsh-working]` is set while the agent works. Long-press the app icon and choose **Safe mode** to start without the custom style.
+- **Agent skill**: [`defaults/`](defaults/) is packed as `android/defaults.tar.gz` and applied after saved state on every start, so the `android-app` skill that teaches the agent these features stays current.
+- **Working notification**: while relayed requests are in flight, and for 20 seconds after the last one, [`WorkingService`](android/app/src/main/java/ai/deepseek/harness/WorkingService.java) runs in the foreground with an ongoing notification and elapsed time, holds a partial wake lock, and asks Android 16 to promote the notification to a live update. When work ends while the app is hidden, it posts a "finished" notification. The app asks for notification permission on first start.
+
 ## Build
 
 Requirements: Node `^24.22.3 || >=26.13.1`, pnpm, JDK 17 or newer, and the Android SDK (platform 35, build-tools 35) with `ANDROID_HOME` set or `android/local.properties` naming `sdk.dir`.
@@ -47,6 +55,8 @@ Android 8.0 (API 26) or newer with an up-to-date Android System WebView is requi
 
 - **Runtime limits apply**: the Worker shell is not bash and has no `git` or network tools, PTC Node programs and Office conversion are unavailable, and plugin installation fails; see the runtime's [limitations](../../packages/experimental/webworker-runtime/README.md#known-limitations-and-deferred-work).
 - **State is saved by snapshot**: a change made less than 20 seconds before Android kills the app in the background can be lost. Each snapshot holds the whole `home/` and `workspace/` trees, so very large workspaces cost memory and storage time.
-- **Background work pauses**: Android may suspend the WebView when the app is not visible, which pauses a running turn until the app returns.
+- **Background work depends on the working service**: Android refuses to start a foreground service while the app is in the background, so a turn that goes idle for 20 seconds in the background and then resumes runs without the notification and wake lock.
+- **Island display is up to the system**: the working notification requests promotion on Android 16; vendor islands such as HyperOS show it only when they support that request.
+- **Plugin installation is unavailable**: installing needs a package-manager process, which the Worker cannot start.
 - **Downloads from the page are not handled**: the WebView has no download handler for files the UI offers to save.
 - **The PATCH method cannot be relayed**: Android's `HttpURLConnection` refuses it, and the relay answers 405.

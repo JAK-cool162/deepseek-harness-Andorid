@@ -46,10 +46,43 @@ public final class LocalServer {
         InputStream open(String path) throws IOException;
     }
 
+    /** Native capabilities the server calls on the app's behalf. */
+    public interface Host {
+        /**
+         * Called whenever the number of relayed requests in flight changes.
+         *
+         * @param inFlight relayed requests currently open
+         */
+        void onRelayActivity(int inFlight);
+
+        /**
+         * Save a file the page offers to the phone's Downloads folder.
+         *
+         * @param name file name without directories
+         * @param bytes file contents
+         * @throws IOException when the file cannot be written
+         */
+        void saveDownload(String name, byte[] bytes) throws IOException;
+    }
+
+    /** Host that ignores activity and refuses saves, for launchers without a device. */
+    public static final Host NO_HOST = new Host() {
+        @Override
+        public void onRelayActivity(int inFlight) {
+        }
+
+        @Override
+        public void saveDownload(String name, byte[] bytes) throws IOException {
+            throw new IOException("saving is unavailable without a device");
+        }
+    };
+
     /** Path the WebView loads first; it sets the token cookie and redirects to the page. */
     public static final String BOOT_PATH = "/__dsh_boot";
     /** Saved state archive endpoint. */
     public static final String STATE_PATH = "/__dsh_state";
+    /** Endpoint that saves a POST body to Downloads under the `name` query. */
+    public static final String SAVE_PATH = "/__dsh_save";
     /** Prefix followed by one percent-encoded absolute URL to relay. */
     public static final String RELAY_PREFIX = "/__dsh_relay/";
     /** Page served for the root path. */
@@ -78,6 +111,8 @@ public final class LocalServer {
     private final AssetSource assets;
     private final File stateFile;
     private final String token;
+    private final Host host;
+    private final java.util.concurrent.atomic.AtomicInteger relaysInFlight = new java.util.concurrent.atomic.AtomicInteger();
     private final ExecutorService pool = Executors.newCachedThreadPool(runnable -> {
         Thread thread = new Thread(runnable, "dsh-local-server");
         thread.setDaemon(true);
@@ -89,11 +124,13 @@ public final class LocalServer {
      * @param assets bundled web files
      * @param stateFile where the state archive is stored; its parent must exist
      * @param token secret the boot URL carries and the cookie must echo
+     * @param host native capabilities; {@link #NO_HOST} when none
      */
-    public LocalServer(AssetSource assets, File stateFile, String token) {
+    public LocalServer(AssetSource assets, File stateFile, String token, Host host) {
         this.assets = assets;
         this.stateFile = stateFile;
         this.token = token;
+        this.host = host;
     }
 
     /**
@@ -120,9 +157,12 @@ public final class LocalServer {
         return bound.getLocalPort();
     }
 
-    /** @return the URL the WebView loads to start the page */
-    public String bootUrl() {
-        return "http://127.0.0.1:" + server.getLocalPort() + BOOT_PATH + "?token=" + token;
+    /**
+     * @param safeMode whether the page starts without the custom style
+     * @return the URL the WebView loads to start the page
+     */
+    public String bootUrl(boolean safeMode) {
+        return "http://127.0.0.1:" + server.getLocalPort() + BOOT_PATH + "?token=" + token + (safeMode ? "&safe=1" : "");
     }
 
     /** Stop accepting and close the listening socket. */
@@ -273,7 +313,7 @@ public final class LocalServer {
             }
             Map<String, String> headers = new LinkedHashMap<>();
             headers.put("Set-Cookie", COOKIE + "=" + token + "; Path=/; HttpOnly; SameSite=Strict");
-            headers.put("Location", "/" + ENTRY_PAGE);
+            headers.put("Location", "/" + ENTRY_PAGE + (request.query("safe") != null ? "?safe=1" : ""));
             headers.put("Cache-Control", "no-store");
             writeHead(out, 302, "Found", headers, 0L);
             return true;
@@ -282,7 +322,15 @@ public final class LocalServer {
             return sendText(request, out, 403, "Forbidden", "missing or invalid session cookie");
         }
         if (path.equals(STATE_PATH)) return handleState(request, out);
-        if (path.startsWith(RELAY_PREFIX)) return relay(request, path.substring(RELAY_PREFIX.length()), out);
+        if (path.equals(SAVE_PATH)) return handleSave(request, out);
+        if (path.startsWith(RELAY_PREFIX)) {
+            host.onRelayActivity(relaysInFlight.incrementAndGet());
+            try {
+                return relay(request, path.substring(RELAY_PREFIX.length()), out);
+            } finally {
+                host.onRelayActivity(relaysInFlight.decrementAndGet());
+            }
+        }
         if (!request.method.equals("GET") && !request.method.equals("HEAD")) {
             return sendText(request, out, 405, "Method Not Allowed", "static assets are read-only");
         }
@@ -361,6 +409,20 @@ public final class LocalServer {
             default:
                 return sendText(request, out, 405, "Method Not Allowed", "unsupported method");
         }
+    }
+
+    private boolean handleSave(Request request, OutputStream out) throws IOException {
+        if (!request.method.equals("POST")) return sendText(request, out, 405, "Method Not Allowed", "use POST");
+        String name = request.query("name");
+        if (name == null || name.isEmpty() || name.contains("/") || name.contains("\\") || name.startsWith(".")) {
+            return sendText(request, out, 400, "Bad Request", "invalid file name");
+        }
+        try {
+            host.saveDownload(name, request.body);
+        } catch (IOException failed) {
+            return sendText(request, out, 500, "Internal Server Error", "could not save: " + failed.getMessage());
+        }
+        return sendText(request, out, 204, "No Content", null);
     }
 
     private boolean relay(Request request, String encoded, OutputStream out) throws IOException {

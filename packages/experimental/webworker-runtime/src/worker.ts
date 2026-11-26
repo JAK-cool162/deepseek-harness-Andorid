@@ -24,7 +24,7 @@ import { installProcessGlobal } from './node/globals/process.ts'
 import { installCryptoGlobals } from './node/globals/crypto.ts'
 import { isShellStartFrame } from './shell/process/protocol.ts'
 import { runShellProcess } from './shell/process/host.ts'
-import { answerVfsExport, isVfsExportFrame } from './storage/vfs-export.ts'
+import { answerVfsExport, answerVfsRead, isVfsExportFrame, isVfsReadFrame } from './storage/vfs-export.ts'
 import { DEFAULT_ROOT } from './image-layout.ts'
 
 // Before the timer globals, so the wrappers close over the patched platform.
@@ -50,10 +50,14 @@ self.addEventListener('message', (event: MessageEvent) => {
     runShellProcess(data, self)
     return
   }
-  // An embedding page's persistence request: answered on its own port, never
-  // through the tunnel, and only in the host role.
+  // An embedding page's persistence and file-watch requests: answered on their
+  // own ports, never through the tunnel, and only in the host role.
   if (!shellRole && isVfsExportFrame(data)) {
     void answerVfsExport(data, host?.vfs, DEFAULT_ROOT)
+    return
+  }
+  if (!shellRole && isVfsReadFrame(data)) {
+    answerVfsRead(data, host?.vfs, DEFAULT_ROOT)
     return
   }
   if (host === undefined && data !== null && typeof data === 'object' && data.t === 'init') {

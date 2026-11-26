@@ -8,7 +8,8 @@ import { inflateImage } from '../../src/storage/image-gzip.ts'
 import { loadVfsImage, loadVfsOverlay, MemoryVfs } from '../../src/storage/memory.ts'
 import { packTar } from '../../src/storage/tar.ts'
 import {
-  answerVfsExport, collectOverlayEntries, exportOverlayArchive, isVfsExportFrame, type VfsExportReply,
+  answerVfsExport, answerVfsRead, collectOverlayEntries, exportOverlayArchive, isVfsExportFrame, isVfsReadFrame,
+  readOverlayFile, type VfsExportReply, type VfsReadReply,
 } from '../../src/storage/vfs-export.ts'
 
 const encoder = new TextEncoder()
@@ -78,6 +79,32 @@ describe('vfs export', () => {
     const result = await reply
     expect(result.ok).toBe(true)
     if (result.ok) expect(Array.from(result.archive.subarray(0, 2))).toEqual([0x1f, 0x8b])
+    port2.close()
+  })
+})
+
+describe('vfs read', () => {
+  it('returns a file under an overlay directory and nothing for a missing one', () => {
+    const vfs = mounted()
+    expect(new TextDecoder().decode(readOverlayFile(vfs, '/dsh', 'workspace/notes/todo.md'))).toBe('# todo\n')
+    expect(readOverlayFile(vfs, '/dsh', 'home/absent.css')).toBeUndefined()
+    expect(readOverlayFile(vfs, '/dsh', 'workspace/notes')).toBeUndefined()
+  })
+
+  it('refuses paths outside the overlay directories', () => {
+    expect(() => readOverlayFile(mounted(), '/dsh', 'config/vfs-manifest.json')).toThrow(/must stay under/)
+    expect(() => readOverlayFile(mounted(), '/dsh', 'home/../config/vfs-manifest.json')).toThrow(/must stay under/)
+  })
+
+  it('answers on the request port', async () => {
+    const { port1, port2 } = new MessageChannel()
+    const reply = new Promise<VfsReadReply>((resolve) => {
+      port2.onmessage = (event: MessageEvent<VfsReadReply>): void => { resolve(event.data) }
+    })
+    expect(isVfsReadFrame({ t: 'vfs-read', path: 'home/x', port: port1 })).toBe(true)
+    answerVfsRead({ t: 'vfs-read', path: 'workspace/notes/todo.md', port: port1 }, mounted(), '/dsh')
+    const result = await reply
+    expect(result.ok && result.bytes !== undefined && new TextDecoder().decode(result.bytes)).toBe('# todo\n')
     port2.close()
   })
 })

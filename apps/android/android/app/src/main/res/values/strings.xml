@@ -3,4 +3,13 @@
     <string name="app_name">DeepSeek Harness</string>
     <string name="server_failed">The local server could not start: %1$s</string>
     <string name="no_app_for_link">No app can open this link.</string>
+    <string name="channel_working">Agent working</string>
+    <string name="channel_finished">Agent finished</string>
+    <string name="working_title">DeepSeek is working</string>
+    <string name="working_text">Tap to open the conversation</string>
+    <string name="finished_title">DeepSeek finished</string>
+    <string name="finished_text">Tap to see the result</string>
+    <string name="safe_mode">Safe mode</string>
+    <string name="safe_mode_long">Open without custom style</string>
+    <string name="working_service_use">Keeps an AI agent turn running and shows its progress while the app is in the background</string>
 </resources>

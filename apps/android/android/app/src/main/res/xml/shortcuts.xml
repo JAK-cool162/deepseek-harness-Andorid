@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon for Safe mode: starts without the custom style from theme.css. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="safe_mode"
+        android:shortcutLongLabel="@string/safe_mode_long"
+        android:shortcutShortLabel="@string/safe_mode">
+        <intent
+            android:action="ai.deepseek.harness.SAFE_MODE"
+            android:targetClass="ai.deepseek.harness.MainActivity"
+            android:targetPackage="ai.deepseek.harness.android" />
+    </shortcut>
+</shortcuts>

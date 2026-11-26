@@ -8,6 +8,9 @@
  * bootstrap tag spliced ahead of its module entry, the same splice
  * `apps/web` performs for `preview.html`.
  *
+ * `android/defaults.tar.gz` packs `defaults/` as an overlay archive: app-owned
+ * files such as the `android-app` skill, applied after saved state.
+ *
  * The Android asset pipeline strips a `.gz` suffix and inflates the file, so
  * every gzip archive is stored under `<name>.gz.raw`; the native asset source
  * maps each `.gz` request to that name.
@@ -15,12 +18,16 @@
  */
 import { cp, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
+import { gzipSync } from 'node:zlib'
 import { fileURLToPath } from 'node:url'
+import { packTar } from '@deepseek-ai/dsh-experimental-webworker-runtime/src/storage/tar.ts'
 
 const path = (rel: string): string => fileURLToPath(new URL(rel, import.meta.url))
 const webDist = path('../../web/dist/')
 const androidDist = path('../dist/')
 const out = path('../android/app/src/main/assets/www/')
+/** App-owned files the bootstrap applies over saved state on every start. */
+const defaults = path('../defaults/')
 /** Suffix that keeps gzip archives byte-identical through the Android asset pipeline; `LocalServer.storedAssetName` matches it. */
 const RAW_SUFFIX = '.raw'
 
@@ -56,6 +63,15 @@ const anchor = page.indexOf('<script type="module"')
 if (anchor === -1) throw new Error('assemble-assets: the built index.html lost its module entry tag')
 const tag = `<script type="module" crossorigin src="./android/${bootstrap}"></script>`
 await writeFile(`${out}android.html`, `${page.slice(0, anchor)}${tag}${page.slice(anchor)}`)
+const defaultFiles: Record<string, Uint8Array> = {}
+const defaultEntries = await readdir(defaults, { recursive: true, withFileTypes: true })
+for (const entry of defaultEntries.sort((a, b) => a.parentPath.localeCompare(b.parentPath))) {
+  if (!entry.isFile()) continue
+  const relative = `${entry.parentPath}/${entry.name}`.slice(defaults.length)
+  defaultFiles[relative] = await readFile(`${entry.parentPath}/${entry.name}`)
+}
+await writeFile(`${out}android/defaults.tar.gz`, gzipSync(packTar(defaultFiles)))
+
 for (const entry of await readdir(out, { recursive: true })) {
   if (entry.endsWith('.gz')) await rename(`${out}${entry}`, `${out}${entry}${RAW_SUFFIX}`)
 }

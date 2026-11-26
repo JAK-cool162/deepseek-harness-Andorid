@@ -29,13 +29,25 @@ public class LocalServerTest {
     private File directory;
     private LocalServer server;
     private String origin;
+    private final java.util.List<Integer> activity = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final java.util.Map<String, byte[]> saved = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Before
     public void start() throws IOException {
         directory = Files.createTempDirectory("dsh-local-server").toFile();
         server = new LocalServer(path -> path.equals("android.html")
                 ? new ByteArrayInputStream("<html>page</html>".getBytes(StandardCharsets.UTF_8))
-                : null, new File(directory, "state.tar.gz"), TOKEN);
+                : null, new File(directory, "state.tar.gz"), TOKEN, new LocalServer.Host() {
+                    @Override
+                    public void onRelayActivity(int inFlight) {
+                        activity.add(inFlight);
+                    }
+
+                    @Override
+                    public void saveDownload(String name, byte[] bytes) {
+                        saved.put(name, bytes);
+                    }
+                });
         origin = "http://127.0.0.1:" + server.start(0);
     }
 
@@ -136,6 +148,7 @@ public class LocalServerTest {
             assertEquals("text/event-stream", relayed.getHeaderField("Content-Type"));
             assertEquals("POST|sk-test|null|{\"q\":1}", new String(body(relayed), StandardCharsets.UTF_8));
         }
+        assertEquals(java.util.List.of(1, 0), activity);
     }
 
     /** Answer one request with its method, API key, cookie, and body. */
@@ -153,6 +166,28 @@ public class LocalServerTest {
         } catch (IOException failed) {
             throw new IllegalStateException(failed);
         }
+    }
+
+    @Test
+    public void bootKeepsSafeModeOnTheRedirect() throws IOException {
+        assertEquals("/android.html?safe=1", open("/__dsh_boot?token=" + TOKEN + "&safe=1", "GET", false).getHeaderField("Location"));
+    }
+
+    @Test
+    public void savesNamedFilesAndRefusesPathNames() throws IOException {
+        HttpURLConnection save = open("/__dsh_save?name=report.html", "POST", true);
+        save.setDoOutput(true);
+        try (OutputStream out = save.getOutputStream()) {
+            out.write("<p>hi</p>".getBytes(StandardCharsets.UTF_8));
+        }
+        assertEquals(204, save.getResponseCode());
+        assertArrayEquals("<p>hi</p>".getBytes(StandardCharsets.UTF_8), saved.get("report.html"));
+        HttpURLConnection escape = open("/__dsh_save?name=..%2Fx.html", "POST", true);
+        escape.setDoOutput(true);
+        try (OutputStream out = escape.getOutputStream()) {
+            out.write(1);
+        }
+        assertEquals(400, escape.getResponseCode());
     }
 
     @Test

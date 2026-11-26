@@ -28,9 +28,9 @@ public final class DevServer {
             } catch (FileNotFoundException missing) {
                 return null;
             }
-        }, new File(args[1]), args[2]);
+        }, new File(args[1]), args[2], LocalServer.NO_HOST);
         server.start(Integer.parseInt(args[3]));
-        System.out.println(server.bootUrl());
+        System.out.println(server.bootUrl(false));
         Thread.currentThread().join();
     }
 }

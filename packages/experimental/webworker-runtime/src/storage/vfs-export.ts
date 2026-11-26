@@ -1,11 +1,12 @@
 /**
- * Export of the overlay-owned directories of a mounted VFS as one gzip-compressed
- * overlay archive, so an embedding page can persist Worker state and pass it back
- * as an ordered overlay on the next start.
+ * Embedder access to the overlay-owned directories of a mounted VFS: a
+ * `vfs-export` frame returns them as one gzip-compressed overlay archive, so an
+ * embedding page can persist Worker state and pass it back as an ordered overlay
+ * on the next start; a `vfs-read` frame returns one file under them.
  *
- * The page asks with a `vfs-export` frame carrying a transferred `MessagePort`;
- * the reply travels on that port only, so the tunnel's response stream never
- * carries a frame its client does not know.
+ * Each frame carries a transferred `MessagePort`; the reply travels on that port
+ * only, so the tunnel's response stream never carries a frame its client does
+ * not know.
  * @module @deepseek-ai/dsh-experimental-webworker-runtime/src/storage/vfs-export
  */
 import { IMAGE_OVERLAY_DIRECTORIES } from '../image-layout.ts'
@@ -112,6 +113,74 @@ export async function answerVfsExport(frame: VfsExportFrame, vfs: MemoryVfs | un
     }
   }
   if (reply.ok) frame.port.postMessage(reply, [reply.archive.buffer])
+  else frame.port.postMessage(reply)
+  frame.port.close()
+}
+
+/** Page request for one file under an overlay directory. */
+export interface VfsReadFrame {
+  readonly t: 'vfs-read'
+  /** Path relative to the virtual root, starting with an overlay directory, such as `home/theme.css`. */
+  readonly path: string
+  /** Port that receives exactly one {@link VfsReadReply}. */
+  readonly port: MessagePort
+}
+
+/** The single message posted on a {@link VfsReadFrame} port; `bytes` is absent when no file exists there. */
+export type VfsReadReply =
+  | { readonly ok: true; readonly bytes?: Uint8Array }
+  | { readonly ok: false; readonly error: string }
+
+/**
+ * Whether a Worker message is a {@link VfsReadFrame}.
+ * @param data - Raw message data.
+ * @returns True for a `vfs-read` frame with a string path and a `MessagePort`.
+ */
+export function isVfsReadFrame(data: unknown): data is VfsReadFrame {
+  if (data === null || typeof data !== 'object') return false
+  const frame = data as { t?: unknown; path?: unknown; port?: unknown }
+  return frame.t === 'vfs-read' && typeof frame.path === 'string'
+    && typeof MessagePort !== 'undefined' && frame.port instanceof MessagePort
+}
+
+/**
+ * Read one file under an overlay directory.
+ * @param vfs - Mounted filesystem.
+ * @param root - Virtual root the image mounted under.
+ * @param path - Root-relative path.
+ * @returns The file bytes, or undefined when no regular file exists there.
+ * @throws When the path leaves the overlay directories.
+ */
+export function readOverlayFile(vfs: MemoryVfs, root: string, path: string): Uint8Array | undefined {
+  const segments = path.split('/')
+  if (segments.some(segment => segment === '' || segment === '.' || segment === '..')
+    || !IMAGE_OVERLAY_DIRECTORIES.includes(segments[0] ?? '')) {
+    throw new Error(`webworker vfs read: path must stay under ${IMAGE_OVERLAY_DIRECTORIES.join('/ or ')}, received "${path}"`)
+  }
+  const absolute = join(root, path)
+  if (!vfs.existsSync(absolute) || vfs.statSync(absolute).isDirectory()) return undefined
+  return vfs.readFileSync(absolute) as Uint8Array
+}
+
+/**
+ * Answer one read request on its port, then close the port.
+ * @param frame - The request.
+ * @param vfs - Mounted filesystem, or undefined before the image mounted.
+ * @param root - Virtual root the image mounted under.
+ */
+export function answerVfsRead(frame: VfsReadFrame, vfs: MemoryVfs | undefined, root: string): void {
+  let reply: VfsReadReply
+  if (vfs === undefined) {
+    reply = { ok: false, error: 'webworker vfs read: the image is not mounted yet' }
+  } else {
+    try {
+      const bytes = readOverlayFile(vfs, root, frame.path)
+      reply = bytes === undefined ? { ok: true } : { ok: true, bytes: bytes.slice() }
+    } catch (error) {
+      reply = { ok: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  }
+  if (reply.ok && reply.bytes !== undefined) frame.port.postMessage(reply, [reply.bytes.buffer])
   else frame.port.postMessage(reply)
   frame.port.close()
 }

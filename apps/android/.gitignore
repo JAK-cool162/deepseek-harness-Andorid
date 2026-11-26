@@ -10,3 +10,4 @@ android/.idea/
 *.iml
 lib/
 android/app/src/main/jniLibs/
+android/native-addons/

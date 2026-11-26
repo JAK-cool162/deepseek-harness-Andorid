@@ -56,9 +56,13 @@ function splitName(name: string): { name: string; prefix: string } {
  * entries. Contents are written verbatim — compression belongs to the HTTP
  * transport, not to the archive.
  * @param files - Entry name to content bytes.
+ * @param modes - Permission bits by entry name; an absent entry gets `0o755` for a directory and `0o644` for a file.
  * @returns The archive bytes.
  */
-export function packTar(files: Readonly<Record<string, Uint8Array>>): Uint8Array {
+export function packTar(
+  files: Readonly<Record<string, Uint8Array>>,
+  modes: Readonly<Record<string, number>> = {},
+): Uint8Array {
   const chunks: Uint8Array[] = []
   for (const [entryName, bytes] of Object.entries(files)) {
     const directory = entryName.endsWith('/')
@@ -66,7 +70,7 @@ export function packTar(files: Readonly<Record<string, Uint8Array>>): Uint8Array
     const { name, prefix } = splitName(entryName)
     const header = new Uint8Array(BLOCK)
     header.set(encoder.encode(name), 0)
-    writeOctal(header, 100, 8, directory ? 0o755 : 0o644)
+    writeOctal(header, 100, 8, (modes[entryName] ?? (directory ? 0o755 : 0o644)) & 0o777)
     writeOctal(header, 108, 8, 0)
     writeOctal(header, 116, 8, 0)
     writeOctal(header, 124, 12, size)

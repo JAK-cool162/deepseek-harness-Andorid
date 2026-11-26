@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write apps/android/README.md
+/deepseek-ai-dsh-android:
+  en: 2844c1ec89e9679f
+  zh: c4ea02e82930b8dc
+/deepseek-ai-dsh-android/how-it-works:
+  en: 525cb33d6da8aa99
+  zh: 74b8335960068ebb
+/deepseek-ai-dsh-android/build:
+  en: 6440041346472e8f
+  zh: 8254c34d56d5bbe7
+/deepseek-ai-dsh-android/install-and-use:
+  en: 06a2a3351bb42cf0
+  zh: b71a3dfe95671c26
+/deepseek-ai-dsh-android/known-limitations-and-deferred-work:
+  en: 4f7dafb777489238
+  zh: 3e3223156228a931

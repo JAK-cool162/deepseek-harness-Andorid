@@ -1,0 +1,22 @@
+{
+  "name": "@deepseek-ai/dsh-android",
+  "description": "Android application: a WebView shell that runs the browser-worker harness on the device and relays its network requests natively",
+  "version": "0.2.3-alpha.2",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build:web": "vite build",
+    "assemble:assets": "tsx scripts/assemble-assets.ts",
+    "build:apk": "pnpm run build:web && pnpm run assemble:assets && cd android && ./gradlew --no-daemon assembleRelease"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-experimental-webworker-runtime": "workspace:*",
+    "@deepseek-ai/dsh-web-frontend": "workspace:*",
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3",
+    "vite": "^6.4.3",
+    "vitest": "^4.1.11"
+  }
+}

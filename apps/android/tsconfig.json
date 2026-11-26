@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "lib/types",
+    "lib": [
+      "ES2024",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "web",
+    "scripts",
+    "tests",
+    "vite.config.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/experimental/webworker-runtime"
+    }
+  ]
+}

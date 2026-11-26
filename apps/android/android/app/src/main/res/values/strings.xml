@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DeepSeek Harness</string>
+    <string name="server_failed">The local server could not start: %1$s</string>
+    <string name="no_app_for_link">No app can open this link.</string>
+</resources>

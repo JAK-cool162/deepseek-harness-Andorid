@@ -45,10 +45,13 @@ describe('profile roster', () => {
 })
 
 describe('platform home patch', () => {
-  it('keeps the composed JSONL row config and sets the plaintext compression the Worker requires', () => {
+  it('keeps composed row config and sets the plaintext compression and Documents directory the Worker requires', () => {
     expect(platformHomePatch(repoRoot, 'web')).toEqual([{
       id: 'session-persistence-jsonl',
       config: { root: { __jsExpr: "dshHomePath('sessions')" }, compression: 'none' },
+    }, {
+      id: 'workspace-controller',
+      config: { documentsDirectory: '/dsh/workspace' },
     }])
   })
 })

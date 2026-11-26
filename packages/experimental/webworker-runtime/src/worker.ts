@@ -13,7 +13,7 @@
 // Straight to the assembly, not through the package barrel: the barrel also
 // publishes the pack-time transform, whose acorn dependency would then be bundled
 // into this worker — which never parses JavaScript.
-import { createWorkerHost } from './worker-host.ts'
+import { createWorkerHost, type WorkerHost } from './worker-host.ts'
 import './node/builtin_modules/implemented/buffer.ts'
 import { alsCausality, runAtAsyncContextRoot } from './node/builtin_modules/implemented/async_hooks.ts'
 import { installAsyncContextHooks } from './polyfill/async-context/async-context-hooks.ts'
@@ -24,13 +24,15 @@ import { installProcessGlobal } from './node/globals/process.ts'
 import { installCryptoGlobals } from './node/globals/crypto.ts'
 import { isShellStartFrame } from './shell/process/protocol.ts'
 import { runShellProcess } from './shell/process/host.ts'
+import { answerVfsExport, isVfsExportFrame } from './storage/vfs-export.ts'
+import { DEFAULT_ROOT } from './image-layout.ts'
 
 // Before the timer globals, so the wrappers close over the patched platform.
 installAsyncContextHooks()
 installTimerGlobals()
 installCryptoGlobals()
 
-let host: { handleMessage(data: unknown): void } | undefined
+let host: WorkerHost | undefined
 let shellRole = false
 const pending: unknown[] = []
 
@@ -46,6 +48,12 @@ self.addEventListener('message', (event: MessageEvent) => {
     // platform check) must not find it missing.
     installProcessGlobal({ cwd: data.cwd, env: data.env })
     runShellProcess(data, self)
+    return
+  }
+  // An embedding page's persistence request: answered on its own port, never
+  // through the tunnel, and only in the host role.
+  if (!shellRole && isVfsExportFrame(data)) {
+    void answerVfsExport(data, host?.vfs, DEFAULT_ROOT)
     return
   }
   if (host === undefined && data !== null && typeof data === 'object' && data.t === 'init') {

@@ -90,11 +90,13 @@ function bootReadyGate(): PromiseWithResolvers<void> {
 }
 
 /**
- * Install the page boot barrier before an asynchronous source chooser waits
- * for user input. The later {@link connectWorkerHost} call settles the same
- * barrier.
+ * Install the page boot barrier before any asynchronous pre-boot step, such as
+ * a source chooser waiting for user input or an embedder reading saved state.
+ * The stock shell entry holds at this barrier until the later
+ * {@link connectWorkerHost} call settles it; a page that never calls
+ * `connectWorkerHost` leaves the shell waiting.
  */
-function holdWorkerHostBoot(): void {
+export function holdWorkerHostBoot(): void {
   const ready = bootReadyGate()
   // A chooser may remain open indefinitely; if a later connection fails before
   // the stock entry subscribes, retain the rejection without browser noise.

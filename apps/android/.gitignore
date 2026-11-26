@@ -1,0 +1,11 @@
+# Vite output and the assembled APK assets are build products.
+dist/
+android/app/src/main/assets/www/
+# Gradle and Android Studio state.
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml
+lib/

@@ -30,10 +30,12 @@ export const IMAGE_HOME_DIRECTORY = 'home'
 /**
  * Config fields the Worker requires on Loader rows, by row id. The packer writes them into the image's home patch
  * (`home/cordis.patch.yml`) over each row's composed config: the Worker carries no Zstandard codec, so JSONL Session
- * logs stay plaintext.
+ * logs stay plaintext; the Worker has no operating-system Documents directory, so first-use Workspace creation uses
+ * the image's `workspace/` directory, which overlays may populate.
  */
 export const PLATFORM_ENTRY_CONFIG: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
   'session-persistence-jsonl': { compression: 'none' },
+  'workspace-controller': { documentsDirectory: `${DEFAULT_ROOT}/workspace` },
 }
 
 /** Working directories the host tree expects to exist, empty. */

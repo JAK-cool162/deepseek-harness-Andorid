@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Cross-compile the native Node addons the full DeepSeek Harness needs for Android (bionic),
 # which the published packages ship only for glibc, musl, macOS, and Windows.
-# Output: android/app/src/main/assets/native-addons/<abi>/node-addon-require-builtin-android-<arch>/, a package the
-# addon's loader finds by name. Requires ANDROID_NDK_HOME (NDK 28), Node 24 headers, git, npm.
+# Output, per ABI under android/app/src/main/assets/native-addons/<abi>/:
+#   node-addon-require-builtin-android-<arch>/  a package that addon's loader finds by name;
+#   node-addon-system-android-<arch>/           this repository's flock addon (native/system), which
+#                                               LinuxEngine installs and enables for Android.
+# Requires ANDROID_NDK_HOME (NDK 28), Node 24 headers, git, npm.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 out="$here/../android/app/src/main/assets/native-addons"
@@ -36,4 +39,11 @@ for pair in aarch64:arm64:arm64-v8a x86_64:x64:x86_64; do
   printf "module.exports = require('./require_builtin.node')\n" > "$package/index.js"
   printf '{"name":"node-addon-require-builtin-android-%s","version":"0.1.10","main":"index.js","license":"MIT"}\n' "$arch" > "$package/package.json"
   echo "built $package"
+
+  system="$out/$abi/node-addon-system-android-$arch"
+  mkdir -p "$system/bin"
+  "$ndk/${triple}-linux-android24-clang" -shared -fPIC -O2 -fvisibility=hidden -DNAPI_VERSION=8 \
+    -I"$node_headers" "$here/../../../native/system/packages/entry/src/flock.c" -s -o "$system/bin/system.node"
+  printf '{"name":"@deepseek-ai/node-addon-system-android-%s","version":"0.1.2","license":"MIT"}\n' "$arch" > "$system/package.json"
+  echo "built $system"
 done

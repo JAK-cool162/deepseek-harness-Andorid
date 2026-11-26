@@ -148,25 +148,49 @@ final class LinuxEngine {
         return new File(prefix, "bin/node").getPath();
     }
 
-    /** Copy the harness's Android addon, which the published packages lack, beside its loader. */
+    /**
+     * Add the Android builds of the harness's two native addons, which the published packages lack:
+     * require-builtin beside its loader, and this repository's flock addon, whose loader is patched
+     * to accept Android because the published one refuses every platform but Linux and macOS.
+     */
     private void installAddon() throws IOException {
         String abi = termuxArch().equals("aarch64") ? "arm64-v8a" : "x86_64";
         String arch = abi.equals("arm64-v8a") ? "arm64" : "x64";
-        String name = "node-addon-require-builtin-android-" + arch;
-        File target = new File(prefix, "lib/node_modules/@deepseek-ai/dsh/node_modules/" + name);
-        mkdirs(target);
-        for (String file : new String[] { "index.js", "package.json", "require_builtin.node" }) {
-            try (InputStream in = context.getAssets().open("native-addons/" + abi + "/" + name + "/" + file);
-                    OutputStream out = new FileOutputStream(new File(target, file))) {
-                Io.copy(in, out);
-            }
+        File modules = new File(prefix, "lib/node_modules/@deepseek-ai/dsh/node_modules");
+        copyAssetTree("native-addons/" + abi + "/node-addon-require-builtin-android-" + arch,
+                new File(modules, "node-addon-require-builtin-android-" + arch));
+        copyAssetTree("native-addons/" + abi + "/node-addon-system-android-" + arch,
+                new File(modules, "@deepseek-ai/node-addon-system-android-" + arch));
+        File flock = new File(modules, "@deepseek-ai/node-addon-system/lib/flock.js");
+        String source;
+        try (InputStream in = new FileInputStream(flock)) {
+            source = new String(Io.readAll(in), StandardCharsets.UTF_8);
+        }
+        String gate = "platform !== 'linux' && platform !== 'darwin'";
+        if (!source.contains(gate + " && platform !== 'android'")) {
+            if (!source.contains(gate)) throw new IOException("the flock addon's platform check changed; the Android patch needs updating");
+            write(flock, source.replace(gate, gate + " && platform !== 'android'"));
         }
     }
 
-    /** Write the app's skills into the engine's dsh home; run before every start. */
+    private void copyAssetTree(String asset, File target) throws IOException {
+        String[] children = context.getAssets().list(asset);
+        if (children == null || children.length == 0) {
+            mkdirs(target.getParentFile());
+            try (InputStream in = context.getAssets().open(asset); OutputStream out = new FileOutputStream(target)) {
+                Io.copy(in, out);
+            }
+            return;
+        }
+        mkdirs(target);
+        for (String child : children) copyAssetTree(asset + "/" + child, new File(target, child));
+    }
+
+    /** Write the app's skills and re-apply the Android addons, which app updates may change; run before every start. */
     private void configure() throws IOException {
         mkdirs(new File(prefix, "tmp"));
         mkdirs(workDir());
+        if (dshEntry().isFile()) installAddon();
         for (String skill : APP_SKILLS) {
             try (InputStream in = context.getAssets().open("engine/skills/" + skill + "/SKILL.md")) {
                 write(new File(home, ".dsh/skills/" + skill + "/SKILL.md"), new String(Io.readAll(in), StandardCharsets.UTF_8));

@@ -10,6 +10,11 @@ node-addon-require-builtin (assets/native-addons/*/node-addon-require-builtin-an
   License: MIT
   Source:  https://github.com/deepseek-ai/dsh-node-addon-require-builtin
 
+@deepseek-ai/node-addon-system flock addon (assets/native-addons/*/node-addon-system-android-*)
+  This repository's native/system/packages/entry/src/flock.c, compiled for
+  Android by the same script.
+  License: MIT
+
 Downloaded at install time, not bundled
 ---------------------------------------
 

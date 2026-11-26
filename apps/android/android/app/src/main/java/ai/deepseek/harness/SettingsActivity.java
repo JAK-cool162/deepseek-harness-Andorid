@@ -35,6 +35,7 @@ public final class SettingsActivity extends Activity {
     private TextView status;
     private TextView builtinStatus;
     private TextView builtinLog;
+    private TextView githubStatus;
     private EditText link;
     private final android.os.Handler refresh = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable refreshBuiltin = new Runnable() {
@@ -90,6 +91,10 @@ public final class SettingsActivity extends Activity {
         }));
         column.addView(button(getString(R.string.builtin_stop), () -> EngineService.send(this, EngineService.ACTION_STOP)));
         column.addView(button(getString(R.string.builtin_remove), this::removeBuiltin));
+        column.addView(text(getString(R.string.github_heading), 15, true));
+        githubStatus = text(getString(R.string.github_checking), 14, false);
+        column.addView(githubStatus);
+        column.addView(button(getString(R.string.github_sign_in), this::signInToGitHub));
         builtinLog = text("", 11, false);
         builtinLog.setTypeface(Typeface.MONOSPACE);
         builtinLog.setTextIsSelectable(true);
@@ -141,6 +146,44 @@ public final class SettingsActivity extends Activity {
     protected void onResume() {
         super.onResume();
         refresh.post(refreshBuiltin);
+        LinuxEngine linux = new LinuxEngine(this);
+        if (!linux.installed()) {
+            githubStatus.setText(R.string.github_needs_engine);
+            return;
+        }
+        GitHubLogin.status(linux, githubListener());
+    }
+
+    private void signInToGitHub() {
+        LinuxEngine linux = new LinuxEngine(this);
+        if (!linux.installed()) {
+            githubStatus.setText(R.string.github_needs_engine);
+            return;
+        }
+        githubStatus.setText(R.string.github_starting);
+        GitHubLogin.start(linux, githubListener());
+    }
+
+    private GitHubLogin.Listener githubListener() {
+        return new GitHubLogin.Listener() {
+            @Override
+            public void code(String code) {
+                runOnUiThread(() -> {
+                    getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("GitHub code", code));
+                    githubStatus.setText(getString(R.string.github_enter_code, code));
+                    open(Uri.parse(GitHubLogin.DEVICE_PAGE));
+                });
+            }
+
+            @Override
+            public void done(String user, String error) {
+                runOnUiThread(() -> {
+                    if (user != null) githubStatus.setText(getString(R.string.github_signed_in, user));
+                    else if (error != null && !error.isEmpty()) githubStatus.setText(getString(R.string.github_failed, error));
+                    else githubStatus.setText(R.string.github_signed_out);
+                });
+            }
+        };
     }
 
     @Override

@@ -46,6 +46,15 @@
     <string name="engine_start_failed">The full engine could not start.</string>
     <string name="engine_not_installed">Not installed.</string>
     <string name="engine_builtin_fallback">The full engine did not start; using on-device mode. Open App settings to see its log.</string>
+    <string name="github_heading">GitHub</string>
+    <string name="github_sign_in">Sign in to GitHub</string>
+    <string name="github_checking">Checking GitHub sign-in…</string>
+    <string name="github_needs_engine">Install the full engine first; GitHub sign-in runs inside it.</string>
+    <string name="github_starting">Asking GitHub for a sign-in code…</string>
+    <string name="github_enter_code">Code %1$s is copied. Paste it on the GitHub page that just opened, then approve. This screen updates when you are done.</string>
+    <string name="github_signed_in">Signed in to GitHub as %1$s. DeepSeek can push and run workflows.</string>
+    <string name="github_signed_out">Not signed in to GitHub.</string>
+    <string name="github_failed">GitHub sign-in failed: %1$s</string>
     <string name="engine_heading">Advanced: Termux engine</string>
     <string name="engine_intro">Run the full DeepSeek Harness in Termux to get plugin installs, real bash, git, Python, Node, and your phone\'s files. The app shows it instead of the lighter on-device mode and starts it for you after setup.</string>
     <string name="engine_step_install">1. Install Termux from F-Droid (the Google Play version is outdated).</string>

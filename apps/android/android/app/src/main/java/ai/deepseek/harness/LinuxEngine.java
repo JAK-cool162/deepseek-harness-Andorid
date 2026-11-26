@@ -233,8 +233,20 @@ final class LinuxEngine {
         return process.waitFor();
     }
 
-    /** A proot command running one script in Debian as root, with a clean environment. */
-    private ProcessBuilder proot(String script) {
+    /**
+     * Run one bash command line in Debian.
+     *
+     * @param commandLine bash source passed to {@code bash -lc}
+     * @return the running process; stdout and stderr are merged, stdin is open
+     * @throws IOException when proot cannot start
+     */
+    Process command(String commandLine) throws IOException {
+        configure();
+        return proot("-lc", commandLine).start();
+    }
+
+    /** A proot command running bash with the given arguments in Debian as root, with a clean environment. */
+    private ProcessBuilder proot(String... bashArguments) {
         String libs = context.getApplicationInfo().nativeLibraryDir;
         List<String> command = new ArrayList<>(List.of(
                 libs + "/libproot.so", "--kill-on-exit", "--link2symlink", "-0",
@@ -252,7 +264,8 @@ final class LinuxEngine {
         command.addAll(List.of("-w", "/root", "/usr/bin/env", "-i",
                 "HOME=/root", "USER=root", "LANG=C.UTF-8", "TERM=xterm-256color", "TMPDIR=/tmp",
                 "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-                "/bin/bash", script));
+                "/bin/bash"));
+        command.addAll(List.of(bashArguments));
         ProcessBuilder builder = new ProcessBuilder(command).redirectErrorStream(true);
         Map<String, String> env = builder.environment();
         env.put("PROOT_LOADER", libs + "/libproot-loader.so");

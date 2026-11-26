@@ -210,8 +210,8 @@ public final class MainActivity extends Activity {
     /** Layer the selected style preset under any custom theme, in either mode. */
     private void applyStylePreset(WebView view) {
         String preset = Style.preset(this);
-        if (Style.DEFAULT.equals(preset)) return;
-        injectStyle(view, "data-dsh-android-preset", readAsset(Style.assetPath(preset)));
+        if (!Style.DEFAULT.equals(preset)) injectStyle(view, "data-dsh-android-preset", readAsset(Style.assetPath(preset)));
+        injectStyle(view, "data-dsh-android-look", Style.lookCss(this));
     }
 
     private void injectStyle(WebView view, String attribute, String css) {

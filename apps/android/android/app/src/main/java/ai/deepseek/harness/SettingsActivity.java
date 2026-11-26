@@ -64,6 +64,16 @@ public final class SettingsActivity extends Activity {
         column.addView(defaultStyle);
         column.addView(glassStyle);
         markStyle();
+        column.addView(text(getString(R.string.style_accent), 15, true));
+        column.addView(choiceRow(Style.ACCENTS, Style.accent(this), "accent_", choice -> {
+            Style.setAccent(this, choice);
+            restart();
+        }));
+        column.addView(text(getString(R.string.style_corners), 15, true));
+        column.addView(choiceRow(Style.CORNERS, Style.corners(this), "corners_", choice -> {
+            Style.setCorners(this, choice);
+            restart();
+        }));
 
         column.addView(text(getString(R.string.builtin_heading), 18, true));
         column.addView(text(getString(R.string.builtin_intro), 14, false));
@@ -178,6 +188,21 @@ public final class SettingsActivity extends Activity {
             String shown = result;
             runOnUiThread(() -> builtinStatus.setText(shown));
         }, "dsh-engine-remove").start();
+    }
+
+    /** A wrapping row of buttons, one per choice, with the current one checked. */
+    private android.view.View choiceRow(String[][] choices, String current, String labelPrefix, java.util.function.Consumer<String> choose) {
+        android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(this);
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        for (String[] choice : choices) {
+            int label = getResources().getIdentifier(labelPrefix + choice[0], "string", getPackageName());
+            Button button = button(getString(label) + (choice[0].equals(current) ? "  ✓" : ""), () -> choose.accept(choice[0]));
+            if (!choice[1].isEmpty() && choice[1].startsWith("#")) button.setTextColor(android.graphics.Color.parseColor(choice[1]));
+            row.addView(button);
+        }
+        scroll.addView(row);
+        return scroll;
     }
 
     private void chooseStyle(String preset) {

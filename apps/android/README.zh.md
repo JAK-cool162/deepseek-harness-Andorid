@@ -34,7 +34,7 @@ Android 应用在手机本机上运行 DeepSeek Harness。整个 Harness 插件�
 
 长按应用图标并选择 **App settings**（[`SettingsActivity`](android/app/src/main/java/ai/deepseek/harness/SettingsActivity.java)）。
 
-- **Style** 选择内置预设（[`Style`](android/app/src/main/java/ai/deepseek/harness/Style.java)），例如液态玻璃。应用在两种模式下每次页面加载后注入它，并放在智能体的 `theme.css` 之前，因此自定义主题仍然优先。
+- **Style** 选择内置预设（[`Style`](android/app/src/main/java/ai/deepseek/harness/Style.java)），例如液态玻璃。应用在两种模式下每次页面加载后注入它，并放在智能体的 `theme.css` 之前，因此自定义主题仍然优先。**Accent color** 和 **Corners** 覆盖 Harness 以内联方式设在 `<body>` 上的蓝色色阶和圆角令牌，因此布局保持 Harness 原有的外观。
 - **Termux engine** 在 Termux 中运行已发布的 `@deepseek-ai/dsh`，并显示它的 `dsh web` 页面而不是设备内页面，用于安装插件、真实 shell、git、Python，以及通过 `termux-setup-storage` 访问手机存储。该页面列出一次性安装命令，请求 Termux 的 `RUN_COMMAND` 权限，并接收 `dsh web` 打印的登录链接。只接受 `127.0.0.1` 和 `localhost` 链接。启动时，如果引擎未运行且已获权限，[`Engine`](android/app/src/main/java/ai/deepseek/harness/Engine.java) 会通过 Termux 启动 `dsh web`，最多等待 45 秒，否则回退到设备内模式并给出提示。首次加载使用带令牌的链接；之后只加载源地址，因为每次启动都会打印新令牌，而已签名的 Cookie 仍然有效；收到 401 时会请求新链接。引擎页面会注入移动端基础样式和捕获阶段的 Enter 垫片，因为已发布的客户端在触摸设备上仍会按 Enter 发送。工作通知、已保存状态和 `theme.css` 属于设备内模式。
 
 ## 构建

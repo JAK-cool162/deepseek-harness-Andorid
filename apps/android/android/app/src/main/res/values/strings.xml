@@ -17,6 +17,16 @@
     <string name="style_intro">A built-in look for the whole app, in both modes. DeepSeek can still restyle the app on top of it.</string>
     <string name="style_default">Default</string>
     <string name="style_liquid_glass">Liquid glass</string>
+    <string name="style_accent">Accent color</string>
+    <string name="style_corners">Corners</string>
+    <string name="accent_default">DeepSeek blue</string>
+    <string name="accent_teal">Teal</string>
+    <string name="accent_violet">Violet</string>
+    <string name="accent_rose">Rose</string>
+    <string name="accent_amber">Amber</string>
+    <string name="corners_default">Default</string>
+    <string name="corners_rounder">Rounder</string>
+    <string name="corners_sharper">Sharper</string>
     <string name="builtin_heading">Full engine (built-in Linux)</string>
     <string name="builtin_intro">Runs the full DeepSeek Harness in a headless Debian Linux inside this app: plugin installs, real bash, git, Python, and Node. No other apps are needed. Install downloads about 300 MB once and needs about 1.5 GB of free storage; keep the app open while it installs.</string>
     <string name="builtin_install">Install or repair</string>

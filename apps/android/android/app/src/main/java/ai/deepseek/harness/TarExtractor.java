@@ -12,8 +12,7 @@ import java.util.Map;
 /**
  * Extracts a tar stream (ustar with GNU long names and PAX paths) into a
  * directory: regular files, directories, symbolic links, and hard links, with
- * permission bits. Device nodes and FIFOs are skipped; proot binds the real
- * `/dev`. Entries whose path leaves the target, or whose parent directory is a
+ * permission bits. Device nodes and FIFOs are skipped. Entries whose path leaves the target, or whose parent directory is a
  * symbolic link, are skipped so the archive cannot write outside the target.
  */
 final class TarExtractor {
@@ -26,7 +25,17 @@ final class TarExtractor {
         void chmod(File file, int mode) throws IOException;
 
         boolean isSymlink(File file);
+
+        String readlink(File file) throws IOException;
     }
+
+    /** Maps an archive path to the path to write, or null to skip the entry. */
+    interface PathMap {
+        String map(String archivePath);
+    }
+
+    /** Writes every entry under its own name. */
+    static final PathMap IDENTITY = path -> path;
 
     /** Progress and skipped-entry reports. */
     interface Listener {
@@ -41,8 +50,14 @@ final class TarExtractor {
     private final Links links;
     private final Listener listener;
     private final String rootPath;
+    private final PathMap pathMap;
 
     TarExtractor(File root, Links links, Listener listener) throws IOException {
+        this(root, links, listener, IDENTITY);
+    }
+
+    TarExtractor(File root, Links links, Listener listener, PathMap pathMap) throws IOException {
+        this.pathMap = pathMap;
         this.root = root;
         this.links = links;
         this.listener = listener;
@@ -90,6 +105,16 @@ final class TarExtractor {
             longName = null;
             longLink = null;
             pax = new HashMap<>();
+            String mapped = pathMap.map(name);
+            if (mapped == null) {
+                skip(in, size);
+                continue;
+            }
+            name = mapped;
+            if (type == '1') {
+                String mappedLink = pathMap.map(link);
+                if (mappedLink != null) link = mappedLink;
+            }
             File target = resolve(name);
             if (target == null) {
                 listener.skipped(name, "path leaves the target directory");

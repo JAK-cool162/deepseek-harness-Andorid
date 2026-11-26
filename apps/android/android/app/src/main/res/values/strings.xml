@@ -28,7 +28,7 @@
     <string name="corners_rounder">Rounder</string>
     <string name="corners_sharper">Sharper</string>
     <string name="builtin_heading">Full engine (built-in Linux)</string>
-    <string name="builtin_intro">Runs the full DeepSeek Harness in a headless Debian Linux inside this app: plugin installs, real bash, git, Python, and Node. No other apps are needed. Install downloads about 300 MB once and needs about 1.5 GB of free storage; keep the app open while it installs.</string>
+    <string name="builtin_intro">Runs the full DeepSeek Harness natively on this phone, with no other apps: plugin installs, real bash, git, gh, Python, and Node. Install downloads about 150 MB once and needs about 900 MB of free storage; keep the app open while it installs.</string>
     <string name="builtin_install">Install or repair</string>
     <string name="builtin_use">Use the full engine</string>
     <string name="builtin_stop">Stop the engine</string>
@@ -46,6 +46,11 @@
     <string name="engine_start_failed">The full engine could not start.</string>
     <string name="engine_not_installed">Not installed.</string>
     <string name="engine_builtin_fallback">The full engine did not start; using on-device mode. Open App settings to see its log.</string>
+    <string name="storage_heading">Phone storage</string>
+    <string name="storage_intro">Lets the full engine read and write phone storage at /sdcard and USB drives under /storage. DeepSeek asks before deleting anything outside its own folder.</string>
+    <string name="storage_allow">Allow phone storage</string>
+    <string name="storage_allowed">Allowed. DeepSeek can use /sdcard and USB drives.</string>
+    <string name="storage_denied">Not allowed. Use Import a folder instead.</string>
     <string name="import_heading">Phone and USB files</string>
     <string name="import_intro">Copy a folder from phone storage, an SD card, or a USB drive into the full engine, so DeepSeek can work on it.</string>
     <string name="import_folder">Import a folder</string>

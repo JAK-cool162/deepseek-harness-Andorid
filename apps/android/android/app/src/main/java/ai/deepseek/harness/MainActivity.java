@@ -71,8 +71,8 @@ public final class MainActivity extends Activity {
     private boolean engineSignInRefused;
     /** Longest wait for a Termux-started engine to answer. */
     private static final long ENGINE_START_WAIT_MS = 45_000;
-    /** Longest wait for the built-in engine; proot makes Node's first start slow. */
-    private static final long BUILTIN_START_WAIT_MS = 180_000;
+    /** Longest wait for the full engine to print its sign-in link. */
+    private static final long BUILTIN_START_WAIT_MS = 90_000;
 
     private boolean isEnginePage(Uri uri) {
         return Engine.isLoopback(uri.getHost()) && uri.getPort() != server.port();
@@ -226,7 +226,7 @@ public final class MainActivity extends Activity {
 
     private String readAsset(String path) {
         try (java.io.InputStream in = getAssets().open(path)) {
-            return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            return new String(Io.readAll(in), java.nio.charset.StandardCharsets.UTF_8);
         } catch (IOException missing) {
             Log.w(TAG, "asset missing: " + path + ": " + missing);
             return "";

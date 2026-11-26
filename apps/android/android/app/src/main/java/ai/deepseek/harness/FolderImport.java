@@ -37,7 +37,7 @@ final class FolderImport {
      */
     static void start(Context context, Uri tree, Listener listener) {
         ContentResolver resolver = context.getContentResolver();
-        File imports = new File(context.getFilesDir(), "linux/rootfs/root/work/imports");
+        File imports = new File(new LinuxEngine(context).workDir(), "imports");
         new Thread(() -> {
             int[] count = { 0 };
             File target = null;
@@ -72,7 +72,7 @@ final class FolderImport {
                 try (InputStream in = resolver.openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, id));
                         OutputStream out = new FileOutputStream(child)) {
                     if (in == null) throw new IOException("cannot read " + name);
-                    in.transferTo(out);
+                    Io.copy(in, out);
                 }
                 count[0]++;
                 listener.progress(count[0], name);

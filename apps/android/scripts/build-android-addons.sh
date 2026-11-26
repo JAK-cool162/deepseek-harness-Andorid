@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Cross-compile the native Node addons the full DeepSeek Harness needs for Android (bionic),
 # which the published packages ship only for glibc, musl, macOS, and Windows.
-# Output: android/native-addons/<abi>/node-addon-require-builtin-android-<arch>/, a package the
+# Output: android/app/src/main/assets/native-addons/<abi>/node-addon-require-builtin-android-<arch>/, a package the
 # addon's loader finds by name. Requires ANDROID_NDK_HOME (NDK 28), Node 24 headers, git, npm.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-out="$here/../android/native-addons"
+out="$here/../android/app/src/main/assets/native-addons"
 ndk="${ANDROID_NDK_HOME:?set ANDROID_NDK_HOME to an NDK 28 install}/toolchains/llvm/prebuilt/linux-x86_64/bin"
 node_headers="${NODE_HEADERS:-$(dirname "$(dirname "$(command -v node)")")/include/node}"
 # dsh-node-addon-require-builtin at the commit these builds were verified against.

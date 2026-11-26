@@ -13,16 +13,16 @@ android {
     defaultConfig {
         applicationId = "ai.deepseek.harness.android"
         minSdk = 26
-        targetSdk = 35
+        // SDK 28 is the last target that lets an app execute programs from its own storage
+        // (the full engine's Node.js, bash, and git) and grants classic shared-storage access, as Termux does.
+        targetSdk = 28
         versionCode = 1
         versionName = "0.2.3-alpha.2"
-        // The bundled proot is arm64 only.
-        ndk { abiFilters += listOf("arm64-v8a") }
     }
 
-    packaging {
-        // proot runs as an executable, so Android must extract it to the native library directory.
-        jniLibs { useLegacyPackaging = true }
+    lint {
+        // The old target SDK is deliberate; see defaultConfig.
+        disable += "ExpiredTargetSdkVersion"
     }
 
     signingConfigs {
@@ -56,5 +56,7 @@ android {
 }
 
 dependencies {
+    // Termux packages are .deb files whose data member is xz-compressed.
+    implementation("org.tukaani:xz:1.10")
     testImplementation("junit:junit:4.13.2")
 }

@@ -26,9 +26,11 @@ Android 应用在手机本机上运行 DeepSeek Harness。整个 Harness 插件�
 - **智能体技能**：[`defaults/`](defaults/) 打包为 `android/defaults.tar.gz`，每次启动都在已保存状态之后应用，使教智能体使用这些功能的 `android-app` 技能，以及 `home/android-ui/presets/` 下的样式预设（如 `liquid-glass.css`）保持最新。
 - **工作通知**：在中继请求进行期间以及最后一个请求结束后的 20 秒内，[`WorkingService`](android/app/src/main/java/ai/deepseek/harness/WorkingService.java) 以前台服务运行，显示带已用时间的常驻通知，持有部分唤醒锁，并请求 Android 16 将通知提升为实时动态。应用在后台时工作结束，会发出“已完成”通知。应用首次启动时会请求通知权限。
 
-## 完整引擎（内置 Linux）
+## 完整引擎（原生）
 
-设备内 Harness 无法启动进程，因此安装插件、真实 shell、git 和 Python 需要完整的 Harness。**App settings → Full engine → Install or repair** 会在应用内部完成安装，不需要其他应用：[`LinuxEngine`](android/app/src/main/java/ai/deepseek/harness/LinuxEngine.java) 下载官方 `debian:bookworm-slim` arm64 镜像层（28 MB，按摘要固定，来自 `public.ecr.aws`，Docker Hub 作为备用），用 [`TarExtractor`](android/app/src/main/java/ai/deepseek/harness/TarExtractor.java) 解包，并在内置 proot 下以 root 运行 [`assets/linux/install.sh`](android/app/src/main/assets/linux/install.sh)。该脚本安装构建工具、GitHub CLI、Node.js 24.22.3 和已发布的 `@deepseek-ai/dsh`，可以安全地重复运行。每次启动前，应用都会把它的 `github-actions` 技能写入引擎的 `~/.dsh/skills/`；该技能让智能体在设备码登录后通过 `gh` 把繁重的构建交给 GitHub Actions。App settings 中的 **Sign in to GitHub** 会自行完成该登录（[`GitHubLogin`](android/app/src/main/java/ai/deepseek/harness/GitHubLogin.java)）：复制一次性代码、打开 github.com/login/device，然后配置 git，因此令牌不会经过应用。**Import a folder** 把在 Android 文件夹选择器中选中的文件夹（手机存储、SD 卡或 USB 驱动器）复制到引擎的 `~/work/imports/`（[`FolderImport`](android/app/src/main/java/ai/deepseek/harness/FolderImport.java)）；引擎的 `android-phone` 技能和设备内的 `android-app` 技能告诉智能体它运行在手机上，以及文件如何到达它。[`EngineService`](android/app/src/main/java/ai/deepseek/harness/EngineService.java) 作为前台服务负责安装和运行中的 `dsh web`，从其输出中读取登录链接，并为设置页面保留最近 400 行日志。选择完整引擎后，应用在启动时启动它，最多等待三分钟获取链接，否则回退到设备内模式。`pnpm run fetch:proot` 把按 SHA-256 固定的 Termux 预编译 proot 下载到 `jniLibs/`，并重命名为 Android 只会解出的 `lib*.so`；[`assets/licenses/THIRD_PARTY.txt`](android/app/src/main/assets/licenses/THIRD_PARTY.txt) 列出了它们的许可证和源码。
+设备内 Harness 无法启动进程，因此安装插件、真实 shell、git 和 Python 需要完整的 Harness。**App settings → Full engine → Install or repair** 会在应用内部完成安装，不需要其他应用。[`NativeInstaller`](android/app/src/main/java/ai/deepseek/harness/NativeInstaller.java) 从 Termux 仓库索引解析 Termux 预编译的 Android 软件包（bash、coreutils、Node.js 24、npm、git、gh、Python 及其库，约 55 MB），逐个按 SHA-256 校验，解包到应用的前缀 `files/usr`，并改写符号链接、脚本 shebang 和 git 的 shell 路径中的 Termux 路径。随后 [`LinuxEngine`](android/app/src/main/java/ai/deepseek/harness/LinuxEngine.java) 运行 `npm install -g @deepseek-ai/dsh@alpha`，并从 `assets/native-addons/` 加入 Harness 的 `node-addon-require-builtin` Android 构建；已发布的软件包没有 Android 构建，因此 `pnpm run build:addons` 用 NDK 交叉编译它。所有程序都以原生方式运行：应用的目标 SDK 为 28，这是最后一个允许应用执行自身存储中的程序并授予传统共享存储访问权限的目标版本，与 Termux 相同。安装可以安全地重复运行，只会获取版本变化的软件包。[`EngineService`](android/app/src/main/java/ai/deepseek/harness/EngineService.java) 作为前台服务负责安装和运行中的 `dsh web`，从其输出中读取登录链接，并为设置页面保留最近 400 行日志。选择完整引擎后，应用在启动时启动它，最多等待 90 秒获取链接，否则回退到设备内模式。
+
+每次启动前，应用都会把它的 `github-actions` 和 `android-phone` 技能写入引擎的 `~/.dsh/skills/`：繁重的构建通过 `gh` 交给 GitHub Actions，智能体也知道自己运行在手机上。**Sign in to GitHub** 运行 `gh auth login --web`（[`GitHubLogin`](android/app/src/main/java/ai/deepseek/harness/GitHubLogin.java)）：复制一次性代码、打开 github.com/login/device，然后配置 git，因此令牌不会经过应用。**Phone storage → Allow** 让引擎访问 `/sdcard` 和 `/storage` 下的 USB 驱动器；**Import a folder** 把在 Android 文件夹选择器中选中的文件夹复制到 `~/work/imports/`（[`FolderImport`](android/app/src/main/java/ai/deepseek/harness/FolderImport.java)）。[`assets/licenses/THIRD_PARTY.txt`](android/app/src/main/assets/licenses/THIRD_PARTY.txt) 列出了随附和下载的内容。
 
 ## 应用设置与 Termux 引擎
 
@@ -68,6 +70,8 @@ pnpm --filter @deepseek-ai/dsh-android run build:apk
 - **状态按快照保存**：Android 在后台结束应用前不到 20 秒内的更改可能丢失。每个快照包含完整的 `home/` 和 `workspace/` 树，因此非常大的 Workspace 会占用较多内存和保存时间。
 - **后台工作依赖工作服务**：应用在后台时 Android 拒绝启动前台服务，因此在后台空闲 20 秒后又继续的轮次将在没有通知和唤醒锁的情况下运行。
 - **岛屿显示取决于系统**：工作通知在 Android 16 上请求提升；HyperOS 等厂商的岛屿只有在支持该请求时才会显示。
-- **无法安装插件**：安装需要包管理器进程，而 Worker 无法启动进程。
+- **安装插件需要完整引擎**：在设备内模式下，安装需要包管理器进程，而 Worker 无法启动进程。
+- **两个原生模块没有 Android 构建**：完整引擎安装 `koffi` 和 `node-pty` 时不构建它们，因此在完整引擎中，加载它们的功能（例如伪终端）会失败。
+- **目标 SDK 使应用无法上架 Google Play**：SDK 28 让完整引擎能够运行其程序；Google Play 要求更新的目标版本，因此应用以 APK 形式分发。
 - **不处理页面下载**：WebView 没有处理界面提供保存的文件的下载处理器。
 - **无法中继 PATCH 方法**：Android 的 `HttpURLConnection` 拒绝该方法，中继返回 405。

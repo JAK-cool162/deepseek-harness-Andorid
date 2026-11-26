@@ -266,7 +266,7 @@ public final class LocalServer {
             } else if (length != null) {
                 long size = Long.parseLong(length);
                 if (size < 0 || size > MAX_BODY_BYTES) throw new IOException("request body too large");
-                body = in.readNBytes((int) size);
+                body = Io.readN(in, (int) size);
                 if (body.length != size) throw new IOException("truncated request body");
             }
             return new Request(parts[0], parts[1], headers, body);
@@ -286,7 +286,7 @@ public final class LocalServer {
                     return buffer.toByteArray();
                 }
                 if (buffer.size() + size > MAX_BODY_BYTES) throw new IOException("request body too large");
-                buffer.write(in.readNBytes(size));
+                buffer.write(Io.readN(in, size));
                 readLine(in);
             }
         }

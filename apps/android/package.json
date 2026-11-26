@@ -8,8 +8,8 @@
   "scripts": {
     "build:web": "vite build",
     "assemble:assets": "tsx scripts/assemble-assets.ts",
-    "fetch:proot": "tsx scripts/fetch-proot.ts",
-    "build:apk": "pnpm run build:web && pnpm run assemble:assets && pnpm run fetch:proot && cd android && ./gradlew --no-daemon assembleRelease"
+    "build:addons": "bash scripts/build-android-addons.sh",
+    "build:apk": "pnpm run build:web && pnpm run assemble:assets && pnpm run build:addons && cd android && ./gradlew --no-daemon assembleRelease"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-experimental-webworker-runtime": "workspace:*",

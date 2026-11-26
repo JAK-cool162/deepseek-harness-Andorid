@@ -11,9 +11,9 @@
 /deepseek-ai-dsh-android/phone-features:
   en: 8df7bb6793d80135
   zh: aa5746fe49b27a40
-/deepseek-ai-dsh-android/full-engine-built-in-linux:
-  en: 1cd10c790c35b34c
-  zh: 32a3369bf044e2cd
+/deepseek-ai-dsh-android/full-engine-native:
+  en: cd013e0f7254421d
+  zh: 3e898d3b8263b782
 /deepseek-ai-dsh-android/app-settings-and-the-termux-engine:
   en: b655f7c344d8601d
   zh: d7a28401b5737eb6
@@ -24,5 +24,5 @@
   en: 06a2a3351bb42cf0
   zh: b71a3dfe95671c26
 /deepseek-ai-dsh-android/known-limitations-and-deferred-work:
-  en: 4028efee3f9fb7ef
-  zh: 48f05fd6d11b1439
+  en: 2055610dbf9f6260
+  zh: 6ccdb6e10d7e236f

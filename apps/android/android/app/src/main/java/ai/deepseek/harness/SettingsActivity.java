@@ -37,6 +37,8 @@ public final class SettingsActivity extends Activity {
     private TextView builtinLog;
     private TextView githubStatus;
     private TextView importStatus;
+    private TextView storageStatus;
+    private static final int STORAGE_REQUEST = 3;
     private static final int PICK_FOLDER_REQUEST = 2;
     private EditText link;
     private final android.os.Handler refresh = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -93,6 +95,11 @@ public final class SettingsActivity extends Activity {
         }));
         column.addView(button(getString(R.string.builtin_stop), () -> EngineService.send(this, EngineService.ACTION_STOP)));
         column.addView(button(getString(R.string.builtin_remove), this::removeBuiltin));
+        column.addView(text(getString(R.string.storage_heading), 15, true));
+        storageStatus = text(getString(storageGranted() ? R.string.storage_allowed : R.string.storage_intro), 14, false);
+        column.addView(storageStatus);
+        column.addView(button(getString(R.string.storage_allow), () -> requestPermissions(new String[] {
+            android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.WRITE_EXTERNAL_STORAGE }, STORAGE_REQUEST)));
         column.addView(text(getString(R.string.import_heading), 15, true));
         importStatus = text(getString(R.string.import_intro), 14, false);
         column.addView(importStatus);
@@ -158,6 +165,10 @@ public final class SettingsActivity extends Activity {
             return;
         }
         GitHubLogin.status(linux, githubListener());
+    }
+
+    private boolean storageGranted() {
+        return checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED;
     }
 
     private void pickFolder() {
@@ -310,6 +321,10 @@ public final class SettingsActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == STORAGE_REQUEST) {
+            storageStatus.setText(storageGranted() ? R.string.storage_allowed : R.string.storage_denied);
+            return;
+        }
         if (requestCode != RUN_COMMAND_REQUEST) return;
         status.setText(Engine.canRunInTermux(this) ? R.string.engine_run_allowed : R.string.engine_run_denied);
     }

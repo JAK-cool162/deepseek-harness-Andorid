@@ -1,26 +1,24 @@
-Third-party software bundled in the DeepSeek Harness Android app
-================================================================
+Third-party software in the DeepSeek Harness Android app
+========================================================
 
-The built-in Linux engine runs on these prebuilt Android binaries from the
-Termux package repository (https://packages.termux.dev), unmodified except
-that the library name libtalloc.so.2 is rewritten to libtalloc.so so Android
-extracts it.
+Bundled in the APK
+------------------
 
-PRoot 5.1.107.102 (lib/arm64-v8a/libproot.so, libproot-loader.so)
-  License: GNU General Public License, version 2
-  Source:  https://github.com/termux/proot
-  Build:   https://github.com/termux/termux-packages/tree/master/packages/proot
+node-addon-require-builtin (assets/native-addons/*/node-addon-require-builtin-android-*)
+  The published package's C++ source, compiled for Android by
+  apps/android/scripts/build-android-addons.sh at the commit it records.
+  License: MIT
+  Source:  https://github.com/deepseek-ai/dsh-node-addon-require-builtin
 
-talloc 2.5.0 (lib/arm64-v8a/libtalloc.so)
-  License: GNU Lesser General Public License, version 3
-  Source:  https://www.samba.org/ftp/talloc/
-  Build:   https://github.com/termux/termux-packages/tree/master/packages/libtalloc
+Downloaded at install time, not bundled
+---------------------------------------
 
-libandroid-shmem 0.7 (lib/arm64-v8a/libandroid-shmem.so)
-  License: BSD 3-Clause
-  Source:  https://github.com/termux/libandroid-shmem
-
-At install time the app downloads, and does not bundle: the official Debian
-bookworm-slim image (Debian Free Software Guidelines licenses), Node.js
-(MIT and bundled licenses), Debian packages, and the published
-@deepseek-ai/dsh npm package and its dependencies.
+The full engine downloads, when the user installs it, prebuilt Android
+packages from the Termux repository (https://packages.termux.dev): bash,
+coreutils, findutils, grep, sed, gawk, diffutils, tar, gzip, xz-utils, less,
+procps, dash, curl, ca-certificates, Node.js (nodejs-lts), npm, git, gh,
+Python, and their libraries. Each keeps its own license; the build recipes
+and license files are at https://github.com/termux/termux-packages, and each
+package installs its license under share/doc/<package>/ in the engine's
+prefix. It then installs the published @deepseek-ai/dsh npm package and its
+dependencies.

@@ -53,6 +53,11 @@ public class TarExtractorTest {
         public boolean isSymlink(File file) {
             return Files.isSymbolicLink(file.toPath());
         }
+
+        @Override
+        public String readlink(File file) throws IOException {
+            return Files.readSymbolicLink(file.toPath()).toString();
+        }
     };
 
     @Before

@@ -14,10 +14,10 @@ step "Preparing package manager"
 echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/01-dsh-android-sandbox
 rm -f /etc/apt/apt.conf.d/docker-clean
 
-if ! command -v git > /dev/null || ! command -v g++ > /dev/null || ! command -v xz > /dev/null; then
+if ! command -v git > /dev/null || ! command -v g++ > /dev/null || ! command -v xz > /dev/null || ! command -v gh > /dev/null; then
   step "Installing system tools"
   apt-get update
-  apt-get install -y --no-install-recommends ca-certificates curl xz-utils git python3 make g++ procps
+  apt-get install -y --no-install-recommends ca-certificates curl xz-utils git gh python3 make g++ procps
   apt-get clean
 fi
 

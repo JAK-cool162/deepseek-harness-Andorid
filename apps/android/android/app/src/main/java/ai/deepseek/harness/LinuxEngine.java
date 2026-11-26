@@ -57,6 +57,9 @@ final class LinuxEngine {
         { "vmstat", "nr_free_pages 1743136\nnr_inactive_anon 179281\nnr_active_anon 7183\n" },
     };
 
+    /** App-owned skills written into the engine's dsh home before every start, so app updates replace them. */
+    private static final String[] APP_SKILLS = { "github-actions" };
+
     /** Install and run output. */
     interface Output {
         void line(String text);
@@ -207,6 +210,11 @@ final class LinuxEngine {
                 write(target, new String(in.readAllBytes(), StandardCharsets.UTF_8));
             }
             chmod(target, 0755);
+        }
+        for (String skill : APP_SKILLS) {
+            try (InputStream in = context.getAssets().open("linux/skills/" + skill + "/SKILL.md")) {
+                write(new File(rootfs, "root/.dsh/skills/" + skill + "/SKILL.md"), new String(in.readAllBytes(), StandardCharsets.UTF_8));
+            }
         }
         File proc = new File(base, "proc");
         for (String[] standIn : PROC_STAND_INS) write(new File(proc, standIn[0]), standIn[1]);

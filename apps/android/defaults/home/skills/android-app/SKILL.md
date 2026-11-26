@@ -25,6 +25,8 @@ The app applies the CSS file `/dsh/home/android-ui/theme.css` on top of its own 
 - Respect both color schemes with `@media (prefers-color-scheme: dark)`, and respect `@media (prefers-reduced-motion: reduce)` by turning animations off.
 - Keep the conversation readable: text contrast of at least 4.5:1, and never hide the message input, the send button, or the settings controls.
 
+Ready-made presets live in `/dsh/home/android-ui/presets/` (`liquid-glass.css`: frosted surfaces over a drifting color field that speeds up while you work). When the user asks for one, read the preset and write it to `theme.css`, adjusting colors if they asked. Target the app's stable hooks rather than generated class names: `[data-composer-card]`, `[data-shortcut-modal="sidebar"]`, `[data-phase]`, `[data-conversation-content]`, `[data-conversation-scroll]`, `[data-conversation-header-leading]`, and roles such as `[role="dialog"]` and `[role="menu"]`.
+
 If a style breaks the app, the user can long-press the app icon and choose **Safe mode**, which starts the app without the custom style. Tell the user about this after your first style change.
 
 Example: frosted glass panels and a moving gradient while working.

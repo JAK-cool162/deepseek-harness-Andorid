@@ -23,7 +23,7 @@ Android 应用在手机本机上运行 DeepSeek Harness。整个 Harness 插件�
 - **触摸行为**：[`web/mobile-base.css`](web/mobile-base.css) 让控件不再触发文本选择或显示点按高亮，加入按压反馈，并让菜单和对话框淡入；减少动态效果时关闭。页面会避开状态栏、刘海区域、导航栏和键盘。
 - **产物**：`present` 工具给出的 HTML 文件在外壳的预览标签页中打开。Worker 用 `xdg-open` 打开的 HTML 或 SVG 文件会在沙箱框架中全屏渲染（[`web/artifact-viewer.ts`](web/artifact-viewer.ts)），并提供 **Save**，经 `/__dsh_save` 写入“下载”目录。
 - **样式 API**：页面每两秒经运行时的 `vfs-read` 帧读取 `/dsh/home/android-ui/theme.css` 并实时应用（[`web/theme.ts`](web/theme.ts)）。只应用 CSS，超过 512 KB 的文件会被忽略，智能体在工作区外写入需要用户批准。智能体工作时会设置 `html[data-dsh-working]`。长按应用图标并选择 **Safe mode** 可在不加载自定义样式的情况下启动。
-- **智能体技能**：[`defaults/`](defaults/) 打包为 `android/defaults.tar.gz`，每次启动都在已保存状态之后应用，使教智能体使用这些功能的 `android-app` 技能保持最新。
+- **智能体技能**：[`defaults/`](defaults/) 打包为 `android/defaults.tar.gz`，每次启动都在已保存状态之后应用，使教智能体使用这些功能的 `android-app` 技能，以及 `home/android-ui/presets/` 下的样式预设（如 `liquid-glass.css`）保持最新。
 - **工作通知**：在中继请求进行期间以及最后一个请求结束后的 20 秒内，[`WorkingService`](android/app/src/main/java/ai/deepseek/harness/WorkingService.java) 以前台服务运行，显示带已用时间的常驻通知，持有部分唤醒锁，并请求 Android 16 将通知提升为实时动态。应用在后台时工作结束，会发出“已完成”通知。应用首次启动时会请求通知权限。
 
 ## 构建

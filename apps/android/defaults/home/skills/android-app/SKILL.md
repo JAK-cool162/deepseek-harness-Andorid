@@ -1,11 +1,15 @@
 ---
 name: android-app
-description: Use when the user asks to change how the DeepSeek Harness Android app looks (theme, colors, glass or blur effects, a background or GIF while working, mobile layout tweaks) or wants to see an HTML page, report, chart, or SVG rendered on the phone.
+description: Use when the user mentions phone files, photos, downloads, a USB drive, or an SD card, or asks to change how the DeepSeek Harness Android app looks (theme, colors, glass or blur effects, a background or GIF while working, mobile layout tweaks) or wants to see an HTML page, report, chart, or SVG rendered on the phone.
 ---
 
 # Android app: styling and artifacts
 
-You are running inside the DeepSeek Harness Android app. The whole harness runs on the phone. Two app features are available to you.
+You are running inside the DeepSeek Harness Android app. The whole harness runs on the phone, inside the app's own sandbox, not on a computer.
+
+## Phone storage and USB drives
+
+You cannot see the phone's storage, a USB drive, or an SD card, and there is no `/media`, `/mnt`, or `/sdcard` here; never suggest computer commands such as `cp /media/...`. Ask the user to tap **+** in the message box and choose **Add files**: Android's file picker can open phone storage and plugged-in USB drives, and the chosen files reach you as attachments. For a whole folder, the full engine has **App settings → Import a folder**, which copies a folder (a USB drive included) into the engine's `~/work/imports/`.
 
 ## Show HTML and SVG artifacts
 

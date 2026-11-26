@@ -36,6 +36,8 @@ public final class SettingsActivity extends Activity {
     private TextView builtinStatus;
     private TextView builtinLog;
     private TextView githubStatus;
+    private TextView importStatus;
+    private static final int PICK_FOLDER_REQUEST = 2;
     private EditText link;
     private final android.os.Handler refresh = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable refreshBuiltin = new Runnable() {
@@ -91,6 +93,10 @@ public final class SettingsActivity extends Activity {
         }));
         column.addView(button(getString(R.string.builtin_stop), () -> EngineService.send(this, EngineService.ACTION_STOP)));
         column.addView(button(getString(R.string.builtin_remove), this::removeBuiltin));
+        column.addView(text(getString(R.string.import_heading), 15, true));
+        importStatus = text(getString(R.string.import_intro), 14, false);
+        column.addView(importStatus);
+        column.addView(button(getString(R.string.import_folder), this::pickFolder));
         column.addView(text(getString(R.string.github_heading), 15, true));
         githubStatus = text(getString(R.string.github_checking), 14, false);
         column.addView(githubStatus);
@@ -152,6 +158,39 @@ public final class SettingsActivity extends Activity {
             return;
         }
         GitHubLogin.status(linux, githubListener());
+    }
+
+    private void pickFolder() {
+        if (!new LinuxEngine(this).installed()) {
+            importStatus.setText(R.string.github_needs_engine);
+            return;
+        }
+        try {
+            startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), PICK_FOLDER_REQUEST);
+        } catch (ActivityNotFoundException none) {
+            importStatus.setText(R.string.no_app_for_link);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != PICK_FOLDER_REQUEST || resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        importStatus.setText(R.string.import_running);
+        FolderImport.start(this, data.getData(), new FolderImport.Listener() {
+            @Override
+            public void progress(int files, String current) {
+                runOnUiThread(() -> importStatus.setText(getString(R.string.import_progress, files, current)));
+            }
+
+            @Override
+            public void done(java.io.File target, int files, String error) {
+                String where = target == null ? "" : "~/work/imports/" + target.getName();
+                runOnUiThread(() -> importStatus.setText(error == null
+                        ? getString(R.string.import_done, files, where)
+                        : getString(R.string.import_failed, error)));
+            }
+        });
     }
 
     private void signInToGitHub() {

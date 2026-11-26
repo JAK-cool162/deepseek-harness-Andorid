@@ -46,6 +46,13 @@
     <string name="engine_start_failed">The full engine could not start.</string>
     <string name="engine_not_installed">Not installed.</string>
     <string name="engine_builtin_fallback">The full engine did not start; using on-device mode. Open App settings to see its log.</string>
+    <string name="import_heading">Phone and USB files</string>
+    <string name="import_intro">Copy a folder from phone storage, an SD card, or a USB drive into the full engine, so DeepSeek can work on it.</string>
+    <string name="import_folder">Import a folder</string>
+    <string name="import_running">Copying…</string>
+    <string name="import_progress">Copied %1$d files (%2$s)</string>
+    <string name="import_done">Copied %1$d files to %2$s. Ask DeepSeek to look there.</string>
+    <string name="import_failed">Import failed: %1$s</string>
     <string name="github_heading">GitHub</string>
     <string name="github_sign_in">Sign in to GitHub</string>
     <string name="github_checking">Checking GitHub sign-in…</string>

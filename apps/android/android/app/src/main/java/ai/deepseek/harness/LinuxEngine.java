@@ -58,7 +58,7 @@ final class LinuxEngine {
     };
 
     /** App-owned skills written into the engine's dsh home before every start, so app updates replace them. */
-    private static final String[] APP_SKILLS = { "github-actions" };
+    private static final String[] APP_SKILLS = { "github-actions", "android-phone" };
 
     /** Install and run output. */
     interface Output {

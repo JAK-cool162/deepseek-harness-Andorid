@@ -7,6 +7,9 @@
  * defaults (Shift+Enter's line break, ordinary spaces, text paste the bar
  * routes itself).
  *
+ * Under a coarse primary pointer, plain Enter keeps its line break and only
+ * Ctrl/Cmd+Enter or the send button submits.
+ *
  * IME guard: a composition-closing Enter/Space must not submit or adjudicate.
  * KeyboardEvent.isComposing covers most engines; Safari delivers the closing
  * keydown AFTER compositionend, so a root-element composition watch holds the
@@ -50,6 +53,11 @@ export interface ComposerKeymapHandlers {
   intakeFiles(files: readonly File[], directories?: ReadonlySet<File>): void
   /** Pasted plain text (sanitized insertion through the shell). */
   pasteText(text: string): void
+}
+
+/** Whether the primary pointer is coarse, the signal for an on-screen keyboard's Enter. */
+function touchPrimary(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
 }
 
 /** Composition state a keydown can trust (see the module doc's Safari note). */
@@ -333,6 +341,9 @@ export function registerComposerKeymap(editor: LexicalEditor, handlers: Composer
         event?.preventDefault()
         return true
       }
+      // On a touch-first device the on-screen keyboard's Enter breaks the line
+      // and the send button submits; Ctrl/Cmd+Enter still submits.
+      if (event !== null && !event.ctrlKey && !event.metaKey && touchPrimary()) return false
       event?.preventDefault()
       if (event?.repeat === true) return true // held-down Enter must not machine-gun sends
       if (!handlers.canSubmit()) return true

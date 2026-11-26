@@ -69,6 +69,31 @@ describe('keymap keydown routing', () => {
     expect(submit).toHaveBeenCalledWith(true)
   })
 
+  it('keeps plain Enter as a line break under a coarse pointer and submits on Ctrl/Cmd+Enter', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(pointer: coarse)', media: query }))
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const editor = createEditor({ namespace: 'keymap-touch', onError: (e) => { throw e } })
+    const root = document.createElement('div')
+    root.contentEditable = 'true'
+    document.body.appendChild(root)
+    onTestFinished(() => {
+      editor.setRootElement(null)
+      root.remove()
+    })
+    editor.setRootElement(root)
+    registerPlainText(editor)
+    const submit = vi.fn()
+    registerComposerKeymap(editor, {
+      arbitrate: () => 'pass', space: () => false, dismissPopup: () => {}, recallHistory: () => false,
+      canSubmit: () => true, submit, intakeFiles: () => {}, pasteText: () => {},
+    })
+    const plain = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    root.dispatchEvent(plain)
+    expect(submit).not.toHaveBeenCalled()
+    fireEvent.keyDown(root, { key: 'Enter', ctrlKey: true })
+    expect(submit).toHaveBeenCalledWith(true)
+  })
+
   it.each([
     { altKey: true },
     { altKey: true, metaKey: true },

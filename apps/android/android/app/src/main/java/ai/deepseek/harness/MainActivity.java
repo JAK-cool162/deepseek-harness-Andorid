@@ -5,10 +5,14 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.res.AssetManager;
+import android.graphics.Insets;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.webkit.ConsoleMessage;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -16,6 +20,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -64,8 +69,30 @@ public final class MainActivity extends Activity {
         webView = new WebView(this);
         webView.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         configure(webView);
-        setContentView(webView);
+        FrameLayout root = new FrameLayout(this);
+        root.addView(webView);
+        keepClearOfSystemBars(root);
+        setContentView(root);
         webView.loadUrl(server.bootUrl());
+    }
+
+    /**
+     * Pad the page out of the status bar, navigation bar, display cutout, and
+     * keyboard. Android 15 draws apps edge to edge, which would otherwise put the
+     * page's header buttons under the status bar where taps do not reach them.
+     */
+    @SuppressWarnings("deprecation")
+    private static void keepClearOfSystemBars(View root) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            root.setFitsSystemWindows(true);
+            return;
+        }
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            Insets clear = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
+                    | WindowInsets.Type.ime());
+            view.setPadding(clear.left, clear.top, clear.right, clear.bottom);
+            return WindowInsets.CONSUMED;
+        });
     }
 
     @SuppressLint("SetJavaScriptEnabled")

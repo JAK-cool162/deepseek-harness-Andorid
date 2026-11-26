@@ -26,6 +26,10 @@ Android 应用在手机本机上运行 DeepSeek Harness。整个 Harness 插件�
 - **智能体技能**：[`defaults/`](defaults/) 打包为 `android/defaults.tar.gz`，每次启动都在已保存状态之后应用，使教智能体使用这些功能的 `android-app` 技能，以及 `home/android-ui/presets/` 下的样式预设（如 `liquid-glass.css`）保持最新。
 - **工作通知**：在中继请求进行期间以及最后一个请求结束后的 20 秒内，[`WorkingService`](android/app/src/main/java/ai/deepseek/harness/WorkingService.java) 以前台服务运行，显示带已用时间的常驻通知，持有部分唤醒锁，并请求 Android 16 将通知提升为实时动态。应用在后台时工作结束，会发出“已完成”通知。应用首次启动时会请求通知权限。
 
+## Linux 引擎
+
+设备内 Harness 无法启动进程，因此安装插件、真实 shell、git 和 Python 需要完整的 Harness。Linux 引擎在同一部手机的 Linux 中运行已发布的 `@deepseek-ai/dsh`，应用显示它的 `dsh web` 页面而不是设备内页面。长按应用图标并选择 **Linux engine**（[`EngineActivity`](android/app/src/main/java/ai/deepseek/harness/EngineActivity.java)）：它显示适用于 Android 16 Linux 终端（Debian arm64）的安装命令，该环境的 glibc 与已发布的 `linux-arm64` 原生模块匹配，并接收 `dsh web` 打印的登录链接。只接受 `127.0.0.1` 和 `localhost` 链接。启动时，已保存的引擎有响应就加载它，否则回退到设备内模式并给出提示。引擎页面会注入移动端基础样式和捕获阶段的 Enter 垫片，因为已发布的客户端在触摸设备上仍会按 Enter 发送。工作通知、已保存状态和样式 API 属于设备内模式；引擎模式下的文件是 Linux 环境中的文件。
+
 ## 构建
 
 要求：Node `^24.22.3 || >=26.13.1`、pnpm、JDK 17 或更高版本，以及 Android SDK（platform 35、build-tools 35），并设置 `ANDROID_HOME` 或在 `android/local.properties` 中写明 `sdk.dir`。

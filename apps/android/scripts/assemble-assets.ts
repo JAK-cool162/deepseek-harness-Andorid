@@ -63,6 +63,9 @@ const anchor = page.indexOf('<script type="module"')
 if (anchor === -1) throw new Error('assemble-assets: the built index.html lost its module entry tag')
 const tag = `<script type="module" crossorigin src="./android/${bootstrap}"></script>`
 await writeFile(`${out}android.html`, `${page.slice(0, anchor)}${tag}${page.slice(anchor)}`)
+// Linux engine pages get the same touch style; MainActivity injects this copy.
+await cp(path('../web/mobile-base.css'), `${out}android/mobile-base.css`)
+
 const defaultFiles: Record<string, Uint8Array> = {}
 const defaultEntries = await readdir(defaults, { recursive: true, withFileTypes: true })
 for (const entry of defaultEntries.sort((a, b) => a.parentPath.localeCompare(b.parentPath))) {

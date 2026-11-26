@@ -157,6 +157,11 @@ public final class LocalServer {
         return bound.getLocalPort();
     }
 
+    /** @return the bound port, or -1 when stopped */
+    public synchronized int port() {
+        return server == null ? -1 : server.getLocalPort();
+    }
+
     /**
      * @param safeMode whether the page starts without the custom style
      * @return the URL the WebView loads to start the page

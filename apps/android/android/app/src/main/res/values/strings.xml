@@ -10,6 +10,21 @@
     <string name="finished_title">DeepSeek finished</string>
     <string name="finished_text">Tap to see the result</string>
     <string name="safe_mode">Safe mode</string>
+    <string name="engine_shortcut">Linux engine</string>
+    <string name="engine_shortcut_long">Choose where the harness runs</string>
+    <string name="engine_title">Linux engine</string>
+    <string name="engine_intro">Run the full DeepSeek Harness in Linux on this phone to get plugin installs, real bash, git, Python, and Node. Android 16 includes a Linux Terminal (Settings, then Developer options, then Linux development environment). The app shows the engine instead of the lighter on-device mode.</string>
+    <string name="engine_step_terminal">1. In the Linux Terminal, run these commands once. The last line starts the engine; next time, run only that line. The first install downloads a few hundred megabytes.</string>
+    <string name="engine_copy">Copy commands</string>
+    <string name="engine_copied">Commands copied</string>
+    <string name="engine_step_link">2. When the terminal prints a link starting with http://127.0.0.1:47400/?token=, copy it and paste it here. If the terminal asks to allow port 47400, allow it.</string>
+    <string name="engine_connect">Connect</string>
+    <string name="engine_use_device">Use on-device mode</string>
+    <string name="engine_checking">Checking the engine…</string>
+    <string name="engine_unreachable">Nothing answers at that link. Make sure dsh web is still running in the terminal and port 47400 is allowed.</string>
+    <string name="engine_status_device">Now using: on-device mode.</string>
+    <string name="engine_status_linux">Now using: Linux engine.</string>
+    <string name="engine_fallback">Linux engine is not running; using on-device mode. Start dsh web in the Linux Terminal, then reopen the app.</string>
     <string name="safe_mode_long">Open without custom style</string>
     <string name="working_service_use">Keeps an AI agent turn running and shows its progress while the app is in the background</string>
 </resources>

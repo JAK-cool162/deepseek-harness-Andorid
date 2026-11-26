@@ -12,4 +12,15 @@
             android:targetClass="ai.deepseek.harness.MainActivity"
             android:targetPackage="ai.deepseek.harness.android" />
     </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="linux_engine"
+        android:shortcutLongLabel="@string/engine_shortcut_long"
+        android:shortcutShortLabel="@string/engine_shortcut">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="ai.deepseek.harness.EngineActivity"
+            android:targetPackage="ai.deepseek.harness.android" />
+    </shortcut>
 </shortcuts>

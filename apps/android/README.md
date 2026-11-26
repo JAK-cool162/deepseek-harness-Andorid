@@ -26,6 +26,10 @@ Saved state is the Worker's `home/` (settings, credentials, Session logs) and `w
 - **Agent skill**: [`defaults/`](defaults/) is packed as `android/defaults.tar.gz` and applied after saved state on every start, so the `android-app` skill that teaches the agent these features, and the style presets under `home/android-ui/presets/` such as `liquid-glass.css`, stay current.
 - **Working notification**: while relayed requests are in flight, and for 20 seconds after the last one, [`WorkingService`](android/app/src/main/java/ai/deepseek/harness/WorkingService.java) runs in the foreground with an ongoing notification and elapsed time, holds a partial wake lock, and asks Android 16 to promote the notification to a live update. When work ends while the app is hidden, it posts a "finished" notification. The app asks for notification permission on first start.
 
+## Linux engine
+
+The on-device harness cannot start processes, so plugin installation, real shells, git, and Python need the full harness. The Linux engine runs the published `@deepseek-ai/dsh` in Linux on the same phone, and the app shows its `dsh web` page instead of the on-device page. Long-press the app icon and choose **Linux engine** ([`EngineActivity`](android/app/src/main/java/ai/deepseek/harness/EngineActivity.java)): it shows setup commands for the Android 16 Linux Terminal (Debian arm64), whose glibc matches the published `linux-arm64` native module, and takes the sign-in link `dsh web` prints. Only `127.0.0.1` and `localhost` links are accepted. At launch, the app loads a saved engine when it answers and otherwise falls back to on-device mode with a notice. Engine pages receive the mobile base style and a capture-phase Enter shim, because the published client still submits on Enter under touch. The working notification, saved state, and style API belong to on-device mode; files in engine mode are the Linux environment's files.
+
 ## Build
 
 Requirements: Node `^24.22.3 || >=26.13.1`, pnpm, JDK 17 or newer, and the Android SDK (platform 35, build-tools 35) with `ANDROID_HOME` set or `android/local.properties` naming `sdk.dir`.

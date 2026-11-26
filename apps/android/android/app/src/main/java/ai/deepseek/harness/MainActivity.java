@@ -46,6 +46,17 @@ public final class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 2;
     /** Launcher-shortcut action that starts the page without the custom style. */
     static final String ACTION_SAFE_MODE = "ai.deepseek.harness.SAFE_MODE";
+    /** Action the engine screen sends after a change: load the chosen harness again. */
+    static final String ACTION_RELOAD = "ai.deepseek.harness.RELOAD";
+    /**
+     * Engine-page shim: on a touch-first device, plain Enter in the composer breaks the line
+     * instead of sending, matching the on-device build. Capture-phase stopping hides the keydown
+     * from the editor's submit handler while the browser still inserts the line break.
+     */
+    private static final String ENGINE_ENTER_SHIM = "(()=>{if(window.__dshEnterShim||!matchMedia('(pointer: coarse)').matches)return;"
+            + "window.__dshEnterShim=1;addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey"
+            + "&&!e.altKey&&!e.isComposing&&e.target instanceof Element&&e.target.closest('[data-composer-input]'))"
+            + "e.stopImmediatePropagation()},true)})()";
     /** Quiet period after the last relayed request before the agent counts as idle; tool steps run in between. */
     private static final long IDLE_AFTER_MS = 20_000;
 
@@ -97,17 +108,57 @@ public final class MainActivity extends Activity {
         root.addView(webView);
         keepClearOfSystemBars(root);
         setContentView(root);
-        webView.loadUrl(server.bootUrl(ACTION_SAFE_MODE.equals(getIntent().getAction())));
+        loadHarness(ACTION_SAFE_MODE.equals(getIntent().getAction()));
         requestNotificationPermission();
+    }
+
+    /**
+     * Load the Linux engine when one is saved and answering, else the on-device harness.
+     *
+     * @param safeMode whether the on-device page starts without the custom style
+     */
+    private void loadHarness(boolean safeMode) {
+        String engine = Engine.savedUrl(this);
+        if (engine == null) {
+            webView.loadUrl(server.bootUrl(safeMode));
+            return;
+        }
+        new Thread(() -> {
+            boolean up = Engine.reachable(engine);
+            main.post(() -> {
+                if (webView == null) return;
+                if (up) {
+                    webView.loadUrl(engine);
+                } else {
+                    Toast.makeText(this, R.string.engine_fallback, Toast.LENGTH_LONG).show();
+                    webView.loadUrl(server.bootUrl(safeMode));
+                }
+            });
+        }, "dsh-engine-probe").start();
+    }
+
+    /** Inject the mobile base style and the Enter shim into a Linux engine page. */
+    private void decorateEnginePage(WebView view) {
+        String css;
+        try (java.io.InputStream in = getAssets().open("www/android/mobile-base.css")) {
+            css = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException missing) {
+            Log.w(TAG, "mobile base style missing from assets: " + missing);
+            css = "";
+        }
+        String quoted = org.json.JSONObject.quote(css);
+        view.evaluateJavascript("(()=>{if(document.querySelector('style[data-dsh-android-base]'))return;"
+                + "const s=document.createElement('style');s.dataset.dshAndroidBase='';s.textContent=" + quoted
+                + ";document.head.append(s)})();" + ENGINE_ENTER_SHIM, null);
     }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (ACTION_SAFE_MODE.equals(intent.getAction()) && webView != null && server != null) {
-            webView.loadUrl(server.bootUrl(true));
-        }
+        if (webView == null || server == null) return;
+        if (ACTION_SAFE_MODE.equals(intent.getAction())) webView.loadUrl(server.bootUrl(true));
+        else if (ACTION_RELOAD.equals(intent.getAction())) loadHarness(false);
     }
 
     private void requestNotificationPermission() {
@@ -179,9 +230,15 @@ public final class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView webView, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                if ("127.0.0.1".equals(uri.getHost())) return false;
+                if (Engine.isLoopback(uri.getHost())) return false;
                 openExternally(uri);
                 return true;
+            }
+
+            @Override
+            public void onPageFinished(WebView webView, String url) {
+                Uri uri = Uri.parse(url);
+                if (Engine.isLoopback(uri.getHost()) && uri.getPort() != server.port()) decorateEnginePage(webView);
             }
         });
         view.setWebChromeClient(new WebChromeClient() {

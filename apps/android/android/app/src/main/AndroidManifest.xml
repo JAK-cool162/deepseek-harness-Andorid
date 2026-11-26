@@ -29,6 +29,10 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+        <activity
+            android:name=".EngineActivity"
+            android:exported="true"
+            android:label="@string/engine_title" />
         <service
             android:name=".WorkingService"
             android:exported="false"

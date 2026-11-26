@@ -15,12 +15,12 @@
     <shortcut
         android:enabled="true"
         android:icon="@mipmap/ic_launcher"
-        android:shortcutId="linux_engine"
-        android:shortcutLongLabel="@string/engine_shortcut_long"
-        android:shortcutShortLabel="@string/engine_shortcut">
+        android:shortcutId="app_settings"
+        android:shortcutLongLabel="@string/settings_shortcut_long"
+        android:shortcutShortLabel="@string/settings_shortcut">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetClass="ai.deepseek.harness.EngineActivity"
+            android:targetClass="ai.deepseek.harness.SettingsActivity"
             android:targetPackage="ai.deepseek.harness.android" />
     </shortcut>
 </shortcuts>

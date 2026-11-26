@@ -7,6 +7,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+
+    <queries>
+        <package android:name="com.termux" />
+    </queries>
 
     <application
         android:allowBackup="false"
@@ -30,9 +35,9 @@
                 android:resource="@xml/shortcuts" />
         </activity>
         <activity
-            android:name=".EngineActivity"
+            android:name=".SettingsActivity"
             android:exported="true"
-            android:label="@string/engine_title" />
+            android:label="@string/settings_title" />
         <service
             android:name=".WorkingService"
             android:exported="false"

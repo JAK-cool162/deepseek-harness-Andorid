@@ -67,6 +67,14 @@ public final class MainActivity extends Activity {
     private boolean working;
     private boolean visible;
     private final Runnable becomeIdle = () -> setWorking(false);
+    /** Whether the engine answered the current load with 401, so the saved sign-in is stale. */
+    private boolean engineSignInRefused;
+    /** Longest wait for a Termux-started engine to answer. */
+    private static final long ENGINE_START_WAIT_MS = 45_000;
+
+    private boolean isEnginePage(Uri uri) {
+        return Engine.isLoopback(uri.getHost()) && uri.getPort() != server.port();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,7 +121,8 @@ public final class MainActivity extends Activity {
     }
 
     /**
-     * Load the Linux engine when one is saved and answering, else the on-device harness.
+     * Load the Termux engine when one is saved, starting it through Termux when it is
+     * not running and the user allowed that; otherwise load the on-device harness.
      *
      * @param safeMode whether the on-device page starts without the custom style
      */
@@ -125,10 +134,25 @@ public final class MainActivity extends Activity {
         }
         new Thread(() -> {
             boolean up = Engine.reachable(engine);
+            if (!up && Engine.canRunInTermux(this) && Engine.startInTermux(this)) {
+                main.post(() -> Toast.makeText(this, R.string.engine_starting, Toast.LENGTH_LONG).show());
+                long deadline = System.currentTimeMillis() + ENGINE_START_WAIT_MS;
+                while (!up && System.currentTimeMillis() < deadline) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                    up = Engine.reachable(engine);
+                }
+            }
+            boolean ready = up;
             main.post(() -> {
                 if (webView == null) return;
-                if (up) {
-                    webView.loadUrl(engine);
+                if (ready) {
+                    engineSignInRefused = false;
+                    webView.loadUrl(Engine.loadUrl(this, engine));
                 } else {
                     Toast.makeText(this, R.string.engine_fallback, Toast.LENGTH_LONG).show();
                     webView.loadUrl(server.bootUrl(safeMode));
@@ -137,19 +161,36 @@ public final class MainActivity extends Activity {
         }, "dsh-engine-probe").start();
     }
 
-    /** Inject the mobile base style and the Enter shim into a Linux engine page. */
+    /** Inject the mobile base style and the Enter shim into a Termux engine page. */
     private void decorateEnginePage(WebView view) {
-        String css;
-        try (java.io.InputStream in = getAssets().open("www/android/mobile-base.css")) {
-            css = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        injectStyle(view, "data-dsh-android-base", readAsset("www/android/mobile-base.css"));
+        view.evaluateJavascript(ENGINE_ENTER_SHIM, null);
+    }
+
+    /** Layer the selected style preset under any custom theme, in either mode. */
+    private void applyStylePreset(WebView view) {
+        String preset = Style.preset(this);
+        if (Style.DEFAULT.equals(preset)) return;
+        injectStyle(view, "data-dsh-android-preset", readAsset(Style.assetPath(preset)));
+    }
+
+    private void injectStyle(WebView view, String attribute, String css) {
+        if (css.isEmpty()) return;
+        String key = org.json.JSONObject.quote(attribute);
+        // Before the custom theme when it exists, so the agent's own theme.css still wins.
+        view.evaluateJavascript("(()=>{const k=" + key + ";if(document.querySelector('style['+k+']'))return;"
+                + "const s=document.createElement('style');s.setAttribute(k,'');s.textContent=" + org.json.JSONObject.quote(css)
+                + ";const t=document.querySelector('style[data-dsh-android-theme]');"
+                + "t?t.before(s):document.head.append(s)})()", null);
+    }
+
+    private String readAsset(String path) {
+        try (java.io.InputStream in = getAssets().open(path)) {
+            return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
         } catch (IOException missing) {
-            Log.w(TAG, "mobile base style missing from assets: " + missing);
-            css = "";
+            Log.w(TAG, "asset missing: " + path + ": " + missing);
+            return "";
         }
-        String quoted = org.json.JSONObject.quote(css);
-        view.evaluateJavascript("(()=>{if(document.querySelector('style[data-dsh-android-base]'))return;"
-                + "const s=document.createElement('style');s.dataset.dshAndroidBase='';s.textContent=" + quoted
-                + ";document.head.append(s)})();" + ENGINE_ENTER_SHIM, null);
     }
 
     @Override
@@ -236,9 +277,25 @@ public final class MainActivity extends Activity {
             }
 
             @Override
+            public void onReceivedHttpError(WebView webView, WebResourceRequest request, android.webkit.WebResourceResponse response) {
+                // The engine refuses an expired or missing sign-in cookie with 401 on the page itself.
+                if (request.isForMainFrame() && response.getStatusCode() == 401 && isEnginePage(request.getUrl())) {
+                    engineSignInRefused = true;
+                    Engine.setPaired(MainActivity.this, false);
+                    Toast.makeText(MainActivity.this, R.string.engine_sign_in_again, Toast.LENGTH_LONG).show();
+                    startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+                }
+            }
+
+            @Override
             public void onPageFinished(WebView webView, String url) {
                 Uri uri = Uri.parse(url);
-                if (Engine.isLoopback(uri.getHost()) && uri.getPort() != server.port()) decorateEnginePage(webView);
+                if (!Engine.isLoopback(uri.getHost())) return;
+                if (isEnginePage(uri)) {
+                    if (!engineSignInRefused) Engine.setPaired(MainActivity.this, true);
+                    decorateEnginePage(webView);
+                }
+                applyStylePreset(webView);
             }
         });
         view.setWebChromeClient(new WebChromeClient() {

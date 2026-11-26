@@ -122,13 +122,13 @@ final class LinuxEngine {
     /**
      * Run one bash command line in the engine's environment.
      *
-     * @param commandLine bash source passed to {@code bash -lc}
+     * @param commandLine bash source passed to {@code bash -c}; not a login shell, whose profile is Termux's
      * @return the running process; stdout and stderr are merged, stdin is open
      * @throws IOException when bash cannot start
      */
     Process command(String commandLine) throws IOException {
         configure();
-        return prepare(new ProcessBuilder(new File(prefix, "bin/bash").getPath(), "-lc", commandLine)).start();
+        return prepare(new ProcessBuilder(new File(prefix, "bin/bash").getPath(), "-c", commandLine)).start();
     }
 
     /** Termux architecture name for this device. */
@@ -194,6 +194,20 @@ final class LinuxEngine {
         env.put("CURL_CA_BUNDLE", p + "/etc/tls/cert.pem");
         env.put("GIT_EXEC_PATH", p + "/libexec/git-core");
         env.put("GIT_TEMPLATE_DIR", p + "/share/git-core/templates");
+        // Termux binaries have Termux's own prefix compiled in for these files; on a phone that
+        // directory belongs to another app or is missing, so each path is pointed at this prefix.
+        env.put("OPENSSL_CONF", p + "/etc/tls/openssl.cnf");
+        env.put("TERMINFO", p + "/share/terminfo");
+        env.put("GIT_CONFIG_NOSYSTEM", "1");
+        env.put("GIT_ATTR_NOSYSTEM", "1");
+        env.put("GIT_SSL_CAINFO", p + "/etc/tls/cert.pem");
+        env.put("NODE_EXTRA_CA_CERTS", p + "/etc/tls/cert.pem");
+        env.put("XDG_CONFIG_HOME", home.getPath() + "/.config");
+        env.put("XDG_CACHE_HOME", home.getPath() + "/.cache");
+        env.put("XDG_DATA_HOME", home.getPath() + "/.local/share");
+        env.put("PIP_CACHE_DIR", home.getPath() + "/.cache/pip");
+        env.put("npm_config_cache", home.getPath() + "/.npm");
+        env.put("npm_config_update_notifier", "false");
         env.put("npm_config_prefix", p);
         env.put("npm_config_script_shell", p + "/bin/sh");
         builder.directory(workDir());

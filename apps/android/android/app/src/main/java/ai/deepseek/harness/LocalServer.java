@@ -63,6 +63,17 @@ public final class LocalServer {
          * @throws IOException when the file cannot be written
          */
         void saveDownload(String name, byte[] bytes) throws IOException;
+
+        /**
+         * Offer a file the page shares to other apps through Android's share sheet.
+         *
+         * @param name file name without directories
+         * @param bytes file contents
+         * @throws IOException when the file cannot be prepared for sharing
+         */
+        default void shareFile(String name, byte[] bytes) throws IOException {
+            throw new IOException("sharing is unavailable");
+        }
     }
 
     /** Host that ignores activity and refuses saves, for launchers without a device. */
@@ -83,6 +94,8 @@ public final class LocalServer {
     public static final String STATE_PATH = "/__dsh_state";
     /** Endpoint that saves a POST body to Downloads under the `name` query. */
     public static final String SAVE_PATH = "/__dsh_save";
+    /** Path that hands a page-provided file to Android's share sheet. */
+    public static final String SHARE_PATH = "/__dsh_share";
     /** Prefix followed by one percent-encoded absolute URL to relay. */
     public static final String RELAY_PREFIX = "/__dsh_relay/";
     /** Page served for the root path. */
@@ -327,7 +340,8 @@ public final class LocalServer {
             return sendText(request, out, 403, "Forbidden", "missing or invalid session cookie");
         }
         if (path.equals(STATE_PATH)) return handleState(request, out);
-        if (path.equals(SAVE_PATH)) return handleSave(request, out);
+        if (path.equals(SAVE_PATH)) return handleFile(request, out, false);
+        if (path.equals(SHARE_PATH)) return handleFile(request, out, true);
         if (path.startsWith(RELAY_PREFIX)) {
             host.onRelayActivity(relaysInFlight.incrementAndGet());
             try {
@@ -416,16 +430,17 @@ public final class LocalServer {
         }
     }
 
-    private boolean handleSave(Request request, OutputStream out) throws IOException {
+    private boolean handleFile(Request request, OutputStream out, boolean share) throws IOException {
         if (!request.method.equals("POST")) return sendText(request, out, 405, "Method Not Allowed", "use POST");
         String name = request.query("name");
         if (name == null || name.isEmpty() || name.contains("/") || name.contains("\\") || name.startsWith(".")) {
             return sendText(request, out, 400, "Bad Request", "invalid file name");
         }
         try {
-            host.saveDownload(name, request.body);
+            if (share) host.shareFile(name, request.body);
+            else host.saveDownload(name, request.body);
         } catch (IOException failed) {
-            return sendText(request, out, 500, "Internal Server Error", "could not save: " + failed.getMessage());
+            return sendText(request, out, 500, "Internal Server Error", (share ? "could not share: " : "could not save: ") + failed.getMessage());
         }
         return sendText(request, out, 204, "No Content", null);
     }

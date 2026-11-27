@@ -73,7 +73,7 @@ public class TarExtractorTest {
     }
 
     /** Minimal ustar writer for test archives. */
-    private static final class TarBuilder {
+    static final class TarBuilder {
         private final ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         TarBuilder entry(String name, char type, int mode, String link, byte[] body) throws IOException {

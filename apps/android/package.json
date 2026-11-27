@@ -9,7 +9,8 @@
     "build:web": "vite build",
     "assemble:assets": "tsx scripts/assemble-assets.ts",
     "build:addons": "bash scripts/build-android-addons.sh",
-    "build:apk": "pnpm run build:web && pnpm run assemble:assets && pnpm run build:addons && cd android && ./gradlew --no-daemon assembleRelease"
+    "build:apk": "pnpm run build:web && pnpm run assemble:assets && pnpm run build:addons && cd android && ./gradlew --no-daemon assembleRelease",
+    "build:engine-bundle": "python3 scripts/bundle-engine.py"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-experimental-webworker-runtime": "workspace:*",

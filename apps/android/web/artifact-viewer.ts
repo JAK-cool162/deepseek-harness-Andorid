@@ -13,6 +13,8 @@ import { VIEW_TEXT_EVENT, type ViewTextDetail } from '@deepseek-ai/dsh-experimen
 
 /** Native endpoint that writes a POST body to the phone's Downloads folder under the `name` query. */
 export const SAVE_URL = '/__dsh_save'
+/** Loopback path that opens Android's share sheet for the posted file. */
+export const SHARE_URL = '/__dsh_share'
 
 /** File names this viewer renders; everything else keeps the runtime's text viewer. */
 const RENDERABLE = /\.(?:html?|svg)$/i
@@ -79,11 +81,19 @@ export function showArtifact(path: string, text: string): void {
       .then((response) => { save.textContent = response.ok ? 'Saved to Downloads' : 'Save failed' })
       .catch(() => { save.textContent = 'Save failed' })
   })
+  const share = document.createElement('button')
+  share.type = 'button'
+  share.textContent = 'Share'
+  share.addEventListener('click', () => {
+    void fetch(`${SHARE_URL}?name=${encodeURIComponent(name)}`, { method: 'POST', body: text })
+      .then((response) => { if (!response.ok) share.textContent = 'Share failed' })
+      .catch(() => { share.textContent = 'Share failed' })
+  })
   const close = document.createElement('button')
   close.type = 'button'
   close.textContent = 'Close'
   close.addEventListener('click', () => { root.remove() })
-  header.append(title, save, close)
+  header.append(title, share, save, close)
   const frame = document.createElement('iframe')
   frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-modals allow-popups')
   frame.title = name

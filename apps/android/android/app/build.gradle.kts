@@ -51,7 +51,7 @@ android {
     androidResources {
         // The VFS image and lazy archives are already gzip members, stored as `.gz.raw`
         // because the asset pipeline would strip and inflate a `.gz` suffix.
-        noCompress += listOf(".raw")
+        noCompress += listOf(".raw", ".deb", ".tgz")
     }
 }
 

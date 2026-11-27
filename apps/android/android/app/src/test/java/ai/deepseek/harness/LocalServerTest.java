@@ -31,6 +31,7 @@ public class LocalServerTest {
     private String origin;
     private final java.util.List<Integer> activity = new java.util.concurrent.CopyOnWriteArrayList<>();
     private final java.util.Map<String, byte[]> saved = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, byte[]> shared = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Before
     public void start() throws IOException {
@@ -46,6 +47,11 @@ public class LocalServerTest {
                     @Override
                     public void saveDownload(String name, byte[] bytes) {
                         saved.put(name, bytes);
+                    }
+
+                    @Override
+                    public void shareFile(String name, byte[] bytes) {
+                        shared.put(name, bytes);
                     }
                 });
         origin = "http://127.0.0.1:" + server.start(0);
@@ -171,6 +177,24 @@ public class LocalServerTest {
     @Test
     public void bootKeepsSafeModeOnTheRedirect() throws IOException {
         assertEquals("/android.html?safe=1", open("/__dsh_boot?token=" + TOKEN + "&safe=1", "GET", false).getHeaderField("Location"));
+    }
+
+    @Test
+    public void sharesNamedFilesThroughTheHostAndRefusesPathNames() throws IOException {
+        HttpURLConnection share = open("/__dsh_share?name=page.html", "POST", true);
+        share.setDoOutput(true);
+        try (OutputStream out = share.getOutputStream()) {
+            out.write("<p>hi</p>".getBytes(StandardCharsets.UTF_8));
+        }
+        assertEquals(204, share.getResponseCode());
+        assertArrayEquals("<p>hi</p>".getBytes(StandardCharsets.UTF_8), shared.get("page.html"));
+        assertTrue(saved.isEmpty());
+        HttpURLConnection escape = open("/__dsh_share?name=..%2Fx.html", "POST", true);
+        escape.setDoOutput(true);
+        try (OutputStream out = escape.getOutputStream()) {
+            out.write(1);
+        }
+        assertEquals(400, escape.getResponseCode());
     }
 
     @Test

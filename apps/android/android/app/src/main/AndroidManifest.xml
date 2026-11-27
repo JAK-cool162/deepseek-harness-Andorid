@@ -57,5 +57,10 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="@string/working_service_use" />
         </service>
+        <provider
+            android:name=".SharedFiles"
+            android:authorities="${applicationId}.shared"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>

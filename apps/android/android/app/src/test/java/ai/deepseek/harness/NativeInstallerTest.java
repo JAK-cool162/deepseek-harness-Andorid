@@ -95,4 +95,60 @@ public class NativeInstallerTest {
             file.delete();
         }
     }
+
+    @Test
+    public void installsEveryRootFromTheBundleWithoutTheNetwork() throws IOException {
+        StringBuilder index = new StringBuilder();
+        Map<String, byte[]> debs = new java.util.HashMap<>();
+        for (String root : NativeInstaller.ROOTS) {
+            byte[] data = new TarExtractorTest.TarBuilder()
+                    .file("./data/data/com.termux/files/usr/share/" + root + "/marker", 0644, root)
+                    .build();
+            ByteArrayOutputStream xz = new ByteArrayOutputStream();
+            try (org.tukaani.xz.XZOutputStream out = new org.tukaani.xz.XZOutputStream(xz, new org.tukaani.xz.LZMA2Options())) {
+                out.write(data);
+            }
+            ByteArrayOutputStream deb = new ByteArrayOutputStream();
+            deb.write("!<arch>\n".getBytes(StandardCharsets.US_ASCII));
+            member(deb, "debian-binary", "2.0\n".getBytes(StandardCharsets.US_ASCII));
+            member(deb, "data.tar.xz", xz.toByteArray());
+            byte[] bytes = deb.toByteArray();
+            debs.put("debs/" + root + ".deb", bytes);
+            index.append("Package: ").append(root).append("\nVersion: 1\nFilename: pool/").append(root)
+                    .append(".deb\nSize: ").append(bytes.length).append("\nSHA256: ").append(sha256(bytes)).append("\n\n");
+        }
+        List<String> opened = new ArrayList<>();
+        File prefix = Files.createTempDirectory("dsh-bundle-prefix").toFile();
+        File cache = Files.createTempDirectory("dsh-bundle-cache").toFile();
+        new NativeInstaller("aarch64", prefix, prefix.getPath(), cache, TarExtractorTest.NIO, new NativeInstaller.Output() {
+            @Override
+            public void line(String text) {
+            }
+
+            @Override
+            public void progress(String step, int percent) {
+                if (step.startsWith("Downloading")) throw new AssertionError("used the network: " + step);
+            }
+        }, name -> {
+            opened.add(name);
+            if (name.equals("Packages")) return new ByteArrayInputStream(index.toString().getBytes(StandardCharsets.UTF_8));
+            byte[] bytes = debs.get(name);
+            return bytes == null ? null : new ByteArrayInputStream(bytes);
+        }).install();
+        for (String root : NativeInstaller.ROOTS) {
+            assertEquals(root, new String(Files.readAllBytes(new File(prefix, "share/" + root + "/marker").toPath()), StandardCharsets.UTF_8));
+        }
+        assertEquals("Packages", opened.get(0));
+        assertEquals(NativeInstaller.ROOTS.length + 1, opened.size());
+    }
+
+    private static String sha256(byte[] bytes) {
+        try {
+            StringBuilder hex = new StringBuilder();
+            for (byte b : java.security.MessageDigest.getInstance("SHA-256").digest(bytes)) hex.append(String.format("%02x", b));
+            return hex.toString();
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new AssertionError(impossible);
+        }
+    }
 }

@@ -53,6 +53,8 @@ public final class MainActivity extends Activity {
      * instead of sending, matching the on-device build. Capture-phase stopping hides the keydown
      * from the editor's submit handler while the browser still inserts the line break.
      */
+    /** Scheme the injected settings button navigates to; never loaded, only intercepted. */
+    private static final String APP_SCHEME = "dsh-app";
     private static final String ENGINE_ENTER_SHIM = "(()=>{if(window.__dshEnterShim||!matchMedia('(pointer: coarse)').matches)return;"
             + "window.__dshEnterShim=1;addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey"
             + "&&!e.altKey&&!e.isComposing&&e.target instanceof Element&&e.target.closest('[data-composer-input]'))"
@@ -98,6 +100,19 @@ public final class MainActivity extends Activity {
             @Override
             public void saveDownload(String name, byte[] bytes) throws IOException {
                 Downloads.save(MainActivity.this, name, bytes);
+            }
+
+            @Override
+            public void shareFile(String name, byte[] bytes) throws IOException {
+                Uri uri = SharedFiles.put(MainActivity.this, name, bytes);
+                Intent send = new Intent(Intent.ACTION_SEND)
+                        .setType(SharedFiles.mimeType(name))
+                        .putExtra(Intent.EXTRA_STREAM, uri)
+                        .putExtra(Intent.EXTRA_TITLE, name)
+                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                send.setClipData(android.content.ClipData.newRawUri(name, uri));
+                Intent chooser = Intent.createChooser(send, name).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                runOnUiThread(() -> startActivity(chooser));
             }
         };
         server = new LocalServer(assets, new File(getFilesDir(), "harness-state.tar.gz"), newToken(), host);
@@ -311,6 +326,13 @@ public final class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView webView, WebResourceRequest request) {
                 Uri uri = request.getUrl();
+                if (APP_SCHEME.equals(uri.getScheme())) {
+                    // Only the app's own top-level page opens native screens; sandboxed artifact frames cannot.
+                    if (request.isForMainFrame() && "settings".equals(uri.getHost())) {
+                        startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+                    }
+                    return true;
+                }
                 if (Engine.isLoopback(uri.getHost())) return false;
                 openExternally(uri);
                 return true;
@@ -336,6 +358,7 @@ public final class MainActivity extends Activity {
                     decorateEnginePage(webView);
                 }
                 applyStylePreset(webView);
+                webView.evaluateJavascript(readAsset("www/android/app-settings-button.js"), null);
             }
         });
         view.setWebChromeClient(new WebChromeClient() {

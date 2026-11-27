@@ -55,6 +55,16 @@ final class NativeInstaller {
         void progress(String step, int percent);
     }
 
+    /** Packages shipped inside the APK, so an install needs no network; see {@code scripts/bundle-engine.sh}. */
+    interface Bundle {
+        /**
+         * @param name bundle-relative path: {@code Packages} for the index, {@code debs/<package>.deb} for a package
+         * @return the file's bytes, or null when the bundle does not have it
+         * @throws IOException when the bundle cannot be read
+         */
+        InputStream open(String name) throws IOException;
+    }
+
     /** One package from the index. */
     static final class Package {
         final String name;
@@ -81,6 +91,7 @@ final class NativeInstaller {
     private final File cache;
     private final TarExtractor.Links links;
     private final Output output;
+    private final Bundle bundle;
 
     /**
      * @param arch Termux architecture name, such as {@code aarch64}
@@ -91,6 +102,14 @@ final class NativeInstaller {
      * @param output progress and log output
      */
     NativeInstaller(String arch, File prefixDir, String prefixPath, File cache, TarExtractor.Links links, Output output) {
+        this(arch, prefixDir, prefixPath, cache, links, output, null);
+    }
+
+    /**
+     * @param bundle packages shipped with the app, used before the network; null to always download
+     */
+    NativeInstaller(String arch, File prefixDir, String prefixPath, File cache, TarExtractor.Links links, Output output, Bundle bundle) {
+        this.bundle = bundle;
         this.arch = arch;
         this.prefixDir = prefixDir;
         this.prefixPath = prefixPath;
@@ -106,7 +125,9 @@ final class NativeInstaller {
      */
     void install() throws IOException {
         output.progress("Reading the package list", -1);
-        Map<String, Package> index = parseIndex(fetchText(REPOSITORY + "/dists/stable/main/binary-" + arch + "/Packages"));
+        String bundledIndex = readBundled("Packages");
+        Map<String, Package> index = parseIndex(bundledIndex != null ? bundledIndex
+                : fetchText(REPOSITORY + "/dists/stable/main/binary-" + arch + "/Packages"));
         List<Package> plan = resolve(index, ROOTS);
         File installed = new File(prefixDir, "var/lib/dsh-android/installed");
         Map<String, String> versions = readInstalled(installed);
@@ -182,14 +203,26 @@ final class NativeInstaller {
         return alternatives.get(0);
     }
 
+    private String readBundled(String name) throws IOException {
+        if (bundle == null) return null;
+        try (InputStream in = bundle.open(name)) {
+            return in == null ? null : new String(Io.readAll(in), java.nio.charset.StandardCharsets.UTF_8);
+        }
+    }
+
     private File download(Package pkg, long done, long total) throws IOException {
         if (!cache.isDirectory() && !cache.mkdirs()) throw new IOException("cannot create " + cache);
         File target = new File(cache, pkg.name + ".deb");
-        HttpURLConnection connection = (HttpURLConnection) new URL(REPOSITORY + "/" + pkg.filename).openConnection();
-        connection.setConnectTimeout(30_000);
-        connection.setReadTimeout(60_000);
+        InputStream bundled = bundle == null ? null : bundle.open("debs/" + pkg.name + ".deb");
+        HttpURLConnection connection = null;
+        if (bundled == null) {
+            connection = (HttpURLConnection) new URL(REPOSITORY + "/" + pkg.filename).openConnection();
+            connection.setConnectTimeout(30_000);
+            connection.setReadTimeout(60_000);
+        }
+        String verb = bundled == null ? "Downloading " : "Copying ";
         MessageDigest sha256 = sha256();
-        try (InputStream in = connection.getInputStream(); OutputStream out = new FileOutputStream(target)) {
+        try (InputStream in = bundled != null ? bundled : connection.getInputStream(); OutputStream out = new FileOutputStream(target)) {
             byte[] buffer = new byte[64 * 1024];
             long received = 0;
             int lastPercent = -1;
@@ -199,12 +232,12 @@ final class NativeInstaller {
                 received += read;
                 int percent = total == 0 ? 100 : (int) ((done + received) * 100 / total);
                 if (percent != lastPercent) {
-                    output.progress("Downloading " + pkg.name + " (" + (total >> 20) + " MB in all)", Math.min(percent, 100));
+                    output.progress(verb + pkg.name + " (" + (total >> 20) + " MB in all)", Math.min(percent, 100));
                     lastPercent = percent;
                 }
             }
         } finally {
-            connection.disconnect();
+            if (connection != null) connection.disconnect();
         }
         if (!hex(sha256.digest()).equals(pkg.sha256)) throw new IOException(pkg.name + " does not match its SHA-256");
         return target;

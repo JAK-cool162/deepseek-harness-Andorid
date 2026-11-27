@@ -28,7 +28,7 @@
     <string name="corners_rounder">Rounder</string>
     <string name="corners_sharper">Sharper</string>
     <string name="builtin_heading">Full engine (built-in Linux)</string>
-    <string name="builtin_intro">Runs the full DeepSeek Harness natively on this phone, with no other apps: plugin installs, real bash, git, gh, Python, and Node. Install downloads about 150 MB once and needs about 900 MB of free storage; keep the app open while it installs.</string>
+    <string name="builtin_intro">Runs the full DeepSeek Harness natively on this phone, with no other apps: plugin installs, real bash, git, gh, Python, and Node. Everything ships inside the app, so install needs no download and takes a minute or two; it needs about 900 MB of free storage. Keep the app open while it installs.</string>
     <string name="builtin_install">Install or repair</string>
     <string name="builtin_use">Use the full engine</string>
     <string name="builtin_stop">Stop the engine</string>

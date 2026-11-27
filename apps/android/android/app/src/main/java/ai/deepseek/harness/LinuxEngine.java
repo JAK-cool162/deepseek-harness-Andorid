@@ -34,6 +34,8 @@ final class LinuxEngine {
     private static final String DSH_PACKAGE = "@deepseek-ai/dsh@alpha";
     /** Install scripts the harness needs; koffi and node-pty have no Android prebuilds and stay unbuilt. */
     private static final String ALLOWED_SCRIPTS = "@deepseek-ai/dsh-subprocess-local,protobufjs";
+    /** Asset directory of the engine shipped in the APK; see {@code scripts/bundle-engine.sh}. */
+    private static final String BUNDLE = "engine-bundle";
     /** App-owned skills written into the engine's dsh home before every start, so app updates replace them. */
     private static final String[] APP_SKILLS = { "github-actions", "android-phone" };
 
@@ -88,15 +90,21 @@ final class LinuxEngine {
                     public void progress(String step, int percent) {
                         output.progress(step, percent);
                     }
-                }).install();
+                }, this::openBundled).install();
         mkdirs(new File(prefix, "tmp"));
         mkdirs(workDir());
         output.progress("Installing DeepSeek Harness", -1);
-        int exit = run(output, List.of(node(), new File(prefix, "lib/node_modules/npm/bin/npm-cli.js").getPath(),
-                "install", "-g", "--no-fund", "--no-audit", "--allow-scripts=" + ALLOWED_SCRIPTS, DSH_PACKAGE));
-        if (exit != 0) throw new IOException("npm install stopped with exit code " + exit);
+        String version = bundledVersion();
+        if (version != null) {
+            unpackBundledHarness(output);
+        } else {
+            int exit = run(output, List.of(node(), new File(prefix, "lib/node_modules/npm/bin/npm-cli.js").getPath(),
+                    "install", "-g", "--no-fund", "--no-audit", "--allow-scripts=" + ALLOWED_SCRIPTS, DSH_PACKAGE));
+            if (exit != 0) throw new IOException("npm install stopped with exit code " + exit);
+            version = DSH_PACKAGE;
+        }
         installAddon();
-        write(new File(home, ".dsh-native-installed"), DSH_PACKAGE + "\n");
+        write(new File(home, ".dsh-native-installed"), version + "\n");
         output.progress("Done", -1);
     }
 
@@ -186,10 +194,74 @@ final class LinuxEngine {
         for (String child : children) copyAssetTree(asset + "/" + child, new File(target, child));
     }
 
+    /**
+     * @param name bundle-relative path
+     * @return the bundled file, or null when this APK does not ship it
+     */
+    private InputStream openBundled(String name) throws IOException {
+        try {
+            return context.getAssets().open(BUNDLE + "/" + termuxArch() + "/" + name);
+        } catch (java.io.FileNotFoundException absent) {
+            return null;
+        }
+    }
+
+    /** @return the bundled harness's version line, or null when this APK has no bundled harness */
+    private String bundledVersion() throws IOException {
+        try (InputStream in = context.getAssets().open(BUNDLE + "/VERSION")) {
+            return new String(Io.readAll(in), StandardCharsets.UTF_8).trim();
+        } catch (java.io.FileNotFoundException absent) {
+            return null;
+        }
+    }
+
+    /** Replace the installed harness with the pre-installed tree from the APK: no npm, no network. */
+    private void unpackBundledHarness(Output output) throws IOException {
+        output.progress("Unpacking DeepSeek Harness", -1);
+        deleteTree(new File(prefix, "lib/node_modules/@deepseek-ai/dsh"));
+        File bin = new File(prefix, "bin/dsh");
+        if ((bin.exists() || ANDROID_LINKS.isSymlink(bin)) && !bin.delete()) throw new IOException("cannot replace " + bin);
+        TarExtractor extractor = new TarExtractor(prefix, ANDROID_LINKS, new TarExtractor.Listener() {
+            @Override
+            public void entry(String path) {
+            }
+
+            @Override
+            public void skipped(String path, String reason) {
+                output.line("skipped " + path + ": " + reason);
+            }
+        });
+        try (InputStream in = new java.util.zip.GZIPInputStream(new java.io.BufferedInputStream(
+                context.getAssets().open(BUNDLE + "/dsh.tgz"), 256 * 1024), 256 * 1024)) {
+            extractor.extract(in);
+        }
+    }
+
     /** Write the app's skills and re-apply the Android addons, which app updates may change; run before every start. */
     private void configure() throws IOException {
         mkdirs(new File(prefix, "tmp"));
         mkdirs(workDir());
+        // An app update that ships a newer bundled harness replaces the installed one before it starts.
+        String version = bundledVersion();
+        File marker = new File(home, ".dsh-native-installed");
+        if (version != null && marker.isFile()) {
+            String installed;
+            try (InputStream in = new FileInputStream(marker)) {
+                installed = new String(Io.readAll(in), StandardCharsets.UTF_8).trim();
+            }
+            if (!version.equals(installed)) {
+                unpackBundledHarness(new Output() {
+                    @Override
+                    public void line(String text) {
+                    }
+
+                    @Override
+                    public void progress(String step, int percent) {
+                    }
+                });
+                write(marker, version + "\n");
+            }
+        }
         if (dshEntry().isFile()) installAddon();
         for (String skill : APP_SKILLS) {
             try (InputStream in = context.getAssets().open("engine/skills/" + skill + "/SKILL.md")) {

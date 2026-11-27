@@ -66,7 +66,7 @@ await writeFile(`${out}android.html`, `${page.slice(0, anchor)}${tag}${page.slic
 // Termux engine pages get the same touch style, and both modes get the chosen style preset;
 // MainActivity injects these copies.
 await cp(path('../web/mobile-base.css'), `${out}android/mobile-base.css`)
-await cp(path('../web/app-settings-button.js'), `${out}android/app-settings-button.js`)
+await cp(path('../web/settings-phone-tab.js'), `${out}android/settings-phone-tab.js`)
 await cp(path('../defaults/home/android-ui/presets/'), `${out}android/presets/`, { recursive: true })
 
 const defaultFiles: Record<string, Uint8Array> = {}

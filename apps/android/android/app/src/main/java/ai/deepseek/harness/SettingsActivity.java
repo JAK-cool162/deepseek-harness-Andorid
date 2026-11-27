@@ -52,9 +52,17 @@ public final class SettingsActivity extends Activity {
     private Button defaultStyle;
     private Button glassStyle;
 
+    /** Indexes into {@link #colors}: the harness's own settings palette (ui-theme design-platform.css). */
+    private static final int BG = 0, SURFACE = 1, FG = 2, SUB = 3, LINE = 4;
+    private int[] colors;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        boolean dark = (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+                == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        colors = dark ? new int[] {0xFF151517, 0xFF2C2C2E, 0xFFF9FAFB, 0xFFADB2B8, 0xFF353638}
+                : new int[] {0xFFFFFFFF, 0xFFF5F6F7, 0xFF0F1115, 0xFF61666B, 0xFFE9ECF2};
         int pad = dp(20);
         LinearLayout column = new LinearLayout(this);
         column.setOrientation(LinearLayout.VERTICAL);
@@ -121,7 +129,8 @@ public final class SettingsActivity extends Activity {
         TextView commands = text(SETUP_COMMANDS, 12, false);
         commands.setTypeface(Typeface.MONOSPACE);
         commands.setTextIsSelectable(true);
-        commands.setBackgroundColor(0x22FFFFFF);
+        commands.setBackground(rounded(colors[SURFACE], 0));
+        commands.setPadding(dp(12), dp(10), dp(12), dp(10));
         commands.setPadding(pad / 2, pad / 2, pad / 2, pad / 2);
         column.addView(commands);
         column.addView(button(getString(R.string.engine_copy), () -> {
@@ -151,8 +160,11 @@ public final class SettingsActivity extends Activity {
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFitsSystemWindows(true);
+        scroll.setBackgroundColor(colors[BG]);
         scroll.addView(column);
         setContentView(scroll);
+        getWindow().setStatusBarColor(colors[BG]);
+        getWindow().setNavigationBarColor(colors[BG]);
     }
 
     @Override
@@ -291,6 +303,10 @@ public final class SettingsActivity extends Activity {
         for (String[] choice : choices) {
             int label = getResources().getIdentifier(labelPrefix + choice[0], "string", getPackageName());
             Button button = button(getString(label) + (choice[0].equals(current) ? "  ✓" : ""), () -> choose.accept(choice[0]));
+            button.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            ((LinearLayout.LayoutParams) button.getLayoutParams()).rightMargin = dp(8);
+            ((LinearLayout.LayoutParams) button.getLayoutParams()).topMargin = dp(8);
+            if (choice[0].equals(current)) button.setBackground(rounded(colors[SURFACE], colors[FG]));
             if (!choice[1].isEmpty() && choice[1].startsWith("#")) button.setTextColor(android.graphics.Color.parseColor(choice[1]));
             row.addView(button);
         }
@@ -384,19 +400,42 @@ public final class SettingsActivity extends Activity {
     private TextView text(String value, int sizeSp, boolean bold) {
         TextView view = new TextView(this);
         view.setText(value);
-        view.setTextSize(sizeSp);
-        if (bold) view.setTypeface(Typeface.DEFAULT_BOLD);
+        view.setTextSize(bold ? Math.min(sizeSp, 20) : Math.min(sizeSp, 13));
+        view.setTextColor(colors[bold ? FG : SUB]);
+        view.setLineSpacing(0, 1.15f);
+        if (bold) view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        params.topMargin = dp(bold ? 20 : 10);
+        params.topMargin = dp(bold ? (sizeSp >= 18 ? 28 : 18) : 6);
         view.setLayoutParams(params);
         return view;
     }
 
+    /** A flat rounded row button in the harness settings style. */
     private Button button(String label, Runnable action) {
         Button view = new Button(this);
         view.setText(label);
         view.setAllCaps(false);
+        view.setTextSize(15);
+        view.setTextColor(colors[FG]);
+        view.setGravity(android.view.Gravity.CENTER_VERTICAL | android.view.Gravity.START);
+        view.setStateListAnimator(null);
+        view.setMinHeight(dp(48));
+        view.setPadding(dp(16), 0, dp(16), 0);
+        view.setBackground(new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(colors[LINE]), rounded(colors[SURFACE], 0), null));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(8);
+        params.rightMargin = dp(8);
+        view.setLayoutParams(params);
         view.setOnClickListener(clicked -> action.run());
         return view;
+    }
+
+    private android.graphics.drawable.GradientDrawable rounded(int fill, int stroke) {
+        android.graphics.drawable.GradientDrawable shape = new android.graphics.drawable.GradientDrawable();
+        shape.setColor(fill);
+        shape.setCornerRadius(dp(12));
+        if (stroke != 0) shape.setStroke(dp(1), stroke);
+        return shape;
     }
 }

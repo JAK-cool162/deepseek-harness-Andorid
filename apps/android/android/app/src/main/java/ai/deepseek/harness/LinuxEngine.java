@@ -300,6 +300,8 @@ final class LinuxEngine {
         env.put("NODE_EXTRA_CA_CERTS", p + "/etc/tls/cert.pem");
         env.put("XDG_CONFIG_HOME", home.getPath() + "/.config");
         env.put("XDG_CACHE_HOME", home.getPath() + "/.cache");
+        // V8 keeps compiled code for the harness's modules here, so starts after the first skip recompiling them.
+        env.put("NODE_COMPILE_CACHE", home.getPath() + "/.cache/node-compile");
         env.put("XDG_DATA_HOME", home.getPath() + "/.local/share");
         env.put("PIP_CACHE_DIR", home.getPath() + "/.cache/pip");
         env.put("npm_config_cache", home.getPath() + "/.npm");
